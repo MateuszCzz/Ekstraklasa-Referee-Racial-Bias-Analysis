@@ -13,7 +13,6 @@ TAB_PAUSE      = 1.0
 
 def _parse_meta(driver) -> dict:
     """Extract matchdata referee/venue/attendance + team names + date."""
-    
     WebDriverWait(driver, MATCHDATA_WAIT).until(EC.presence_of_element_located((By.CSS_SELECTOR, MATCHDATA_CSS)))
 
     matchdata_div = driver.find_element(By.CSS_SELECTOR, MATCHDATA_CSS)
@@ -45,6 +44,16 @@ def _parse_meta(driver) -> dict:
         pass
 
     return result
+
+
+def _is_empty_row(row: dict) -> bool:
+    for key, val in row.items():
+        if key == "player":
+            continue
+        v = str(val).strip()
+        if v and v not in ("-", "—", "–", ""):
+            return False
+    return True
 
 
 def _parse_stats_table(driver) -> list[dict]:
@@ -88,6 +97,10 @@ def _parse_stats_table(driver) -> list[dict]:
                 break
             srt = td.get_attribute("data-srt")
             row[headers[i + 1]] = srt if srt is not None else td.text.strip()
+
+        # skip on no stats
+        if not row.get("player") or _is_empty_row(row):
+            continue
 
         players.append(row)
 
