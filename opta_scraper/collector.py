@@ -11,6 +11,10 @@ PAGE_LOAD_WAIT  = 1.0   # after initial page load
 CLICK_WAIT      = 0.5   # after clicking nav toggle or matchday
 MATCH_PAGE_WAIT = 3.0   # after navigating into a match
 
+MIN_MATCHES_PER_ROUND = 9   # expected amount of matches per round; for extraklasa its 9
+RETRY_WAIT          = 10  # wait time after hard error
+MAX_RETRIES         = 3   # how many times to retry before giving up
+
 NAV_TOGGLE_XPATH      = "//div[@class='Opta-Nav']//h3[contains(@class,'Opta-Exp')]"
 NAV_TOGGLE_OPEN_XPATH = "//div[@class='Opta-Nav']//h3[contains(@class,'Opta-Exp') and contains(@class,'Opta-Open')]"
 MATCHDAY_LIST_XPATH   = "//ul[@class='Opta-Cf']"
@@ -38,16 +42,48 @@ def _navbar_control(driver, click_name: str | None = None) -> list:
 
     return matchday_list
 
-def _scrape_matchday(driver, matchday_name: str) -> dict:
-    """For each match in the current matchday: click, parse, go back."""
-    match_ids = [
-        mid for row in driver.find_elements(By.XPATH, MATCH_ROWS_XPATH)
-        if row.is_displayed() and (mid := row.get_attribute("data-match"))
-    ]
+
+def _check_matches(driver, matchday_name: str, base_url: str) -> list[str]:
+
+    def _read_ids() -> list[str]:
+        return [
+            mid for row in driver.find_elements(By.XPATH, MATCH_ROWS_XPATH)
+            if row.is_displayed() and (mid := row.get_attribute("data-match"))
+        ]
+
+    match_ids = _read_ids()
+    if len(match_ids) >= MIN_MATCHES_PER_ROUND:
+        return match_ids
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        count = len(match_ids)
+        if count == 0:
+            print(f"  [{matchday_name}] No match rows found (attempt {attempt}/{MAX_RETRIES}) reloading...")
+        else:
+            print(
+                f"  [{matchday_name}] Only {count} match(es) detected "
+                f"(expected ≥{MIN_MATCHES_PER_ROUND}), attempt {attempt}/{MAX_RETRIES} — "
+                f"waiting {RETRY_WAIT}s then reloading base URL..."
+            )
+
+        time.sleep(RETRY_WAIT)
+
+        # error: not enough matches go full reload
+        driver.get(base_url)
+        time.sleep(PAGE_LOAD_WAIT)
+        _navbar_control(driver, click_name=matchday_name)
+
+        match_ids = _read_ids()
+        if len(match_ids) >= MIN_MATCHES_PER_ROUND:
+            return match_ids
+
+    print(f"  [{matchday_name}] Proceeding with {len(match_ids)} match(es) after {MAX_RETRIES} retries")
+    return match_ids
+
 
 def _scrape_matchday(driver, matchday_name: str, done_registry: dict, base_url: str) -> dict:
     """For each match in the current matchday: click, parse, go back."""
-    match_ids = _get_match_ids(driver, matchday_name, base_url)
+    match_ids = _check_matches(driver, matchday_name, base_url)
 
     if not match_ids:
         print(f"  [{matchday_name}] No match rows found skipping")
