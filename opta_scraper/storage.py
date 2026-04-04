@@ -2,6 +2,7 @@ import json
 import re
 from pathlib import Path
 
+DONE_PATH    = Path("data/config/matchesdone.json")
 PARTIAL_DIR  = Path("data/partial")
 
 def ensure_data_dir(path: Path) -> None:
@@ -44,3 +45,30 @@ def save_partial_match(matchday_name: str, match_data: dict) -> Path:
     dest = PARTIAL_DIR / filename
     save_json(dest, match_data)
     return dest
+
+def _done_key(match_data: dict) -> str:
+    """create done id for a match date_hometeam_awayteam"""
+    date      = re.sub(r"[^A-Za-z0-9]", "", match_data.get("date", "nodate"))
+    home_slug = _clean_text(match_data.get("home_team", "unknown"), 50)
+    away_slug = _clean_text(match_data.get("away_team", "unknown"), 50)
+    return f"{date}_{home_slug}_{away_slug}"
+
+def load_done_matches() -> dict:
+    """Load the done-matches registry; returns {} if file missing."""
+    if not DONE_PATH.exists():
+        return {}
+    return load_json(DONE_PATH)
+
+def is_match_done(match_data: dict, done_registry: dict) -> bool:
+    return _done_key(match_data) in done_registry
+
+def mark_match_done(match_data: dict, done_registry: dict) -> None:
+    """Add the match to the in-memory registry and persist it."""
+    key = _done_key(match_data)
+    done_registry[key] = {
+        "date":      match_data.get("date"),
+        "home_team": match_data.get("home_team"),
+        "away_team": match_data.get("away_team"),
+        "matchday":  match_data.get("matchday"),
+    }
+    save_json(DONE_PATH, done_registry)
