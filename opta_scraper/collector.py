@@ -5,6 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 
 from parser import parse_match
+from storage import save_partial_match
 
 PAGE_LOAD_WAIT  = 1.0   # after initial page load
 CLICK_WAIT      = 0.5   # after clicking nav toggle or matchday
@@ -44,8 +45,12 @@ def _scrape_matchday(driver, matchday_name: str) -> dict:
         if row.is_displayed() and (mid := row.get_attribute("data-match"))
     ]
 
+def _scrape_matchday(driver, matchday_name: str, done_registry: dict, base_url: str) -> dict:
+    """For each match in the current matchday: click, parse, go back."""
+    match_ids = _get_match_ids(driver, matchday_name, base_url)
+
     if not match_ids:
-        print(f"  [{matchday_name}] No match rows found")
+        print(f"  [{matchday_name}] No match rows found skipping")
         return {}
 
     print(f"  [{matchday_name}] Found {len(match_ids)} matches")
@@ -62,8 +67,9 @@ def _scrape_matchday(driver, matchday_name: str) -> dict:
             time.sleep(MATCH_PAGE_WAIT)
 
             parsed = parse_match(driver)
-            results[match_id] = {"match_id": match_id, "matchday": matchday_name, **parsed}
-            print(f"    [{matchday_name}] Match {match_id} — {parsed}")
+            match_data = {"match_id": match_id, "matchday": matchday_name, **parsed}
+            saved_path = save_partial_match(matchday_name, match_data)
+            print(f"    [{matchday_name}] Saved partial {saved_path}")
 
             # Navigate back
             driver.back()
