@@ -7,9 +7,9 @@ from selenium.webdriver.common.keys import Keys
 from parser import parse_match
 from storage import save_partial_match, load_done_matches, is_match_done, mark_match_done
 
-PAGE_LOAD_WAIT  = 1.0   # after initial page load
-CLICK_WAIT      = 0.5   # after clicking nav toggle or matchday
-MATCH_PAGE_WAIT = 3.0   # after navigating into a match
+PAGE_LOAD_WAIT  = 2.0   # after initial page load
+CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
+MATCH_PAGE_WAIT = 4.0   # after navigating into a match
 
 MIN_MATCHES_PER_ROUND = 9   # expected amount of matches per round; for extraklasa its 9
 RETRY_WAIT          = 10  # wait time after hard error
