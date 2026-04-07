@@ -2,18 +2,17 @@ import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
 
 from parser import parse_match
-from storage import save_partial_match, load_done_matches, is_match_done, mark_match_done
+from storage import save_partial_match, is_match_done
 
 PAGE_LOAD_WAIT  = 2.0   # after initial page load
 CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
 MATCH_PAGE_WAIT = 4.0   # after navigating into a match
 
 MIN_MATCHES_PER_ROUND = 9   # expected amount of matches per round; for extraklasa its 9
-RETRY_WAIT          = 10  # wait time after hard error
-MAX_RETRIES         = 3   # how many times to retry before giving up
+RETRY_WAIT            = 10  # wait time after hard error
+MAX_RETRIES           = 3   # how many times to retry before giving up
 
 NAV_TOGGLE_XPATH      = "//div[@class='Opta-Nav']//h3[contains(@class,'Opta-Exp')]"
 NAV_TOGGLE_OPEN_XPATH = "//div[@class='Opta-Nav']//h3[contains(@class,'Opta-Exp') and contains(@class,'Opta-Open')]"
@@ -21,6 +20,8 @@ MATCHDAY_LIST_XPATH   = "//ul[@class='Opta-Cf']"
 MATCHDAY_ITEMS_XPATH  = "//ul[@class='Opta-Cf']//li/a"
 MATCH_ROWS_XPATH      = "//tbody[contains(@class,'Opta-fixture')]"
 MATCH_DIVIDER_XPATH   = ".//td[@class='Opta-Divider Opta-Dash']"
+HOME_TEAM_XPATH       = ".//td[contains(@class,'Opta-Home')]"
+
 
 def _navbar_control(driver, click_name: str | None = None) -> list:
     """Open navbar if needed, click element and return matchday list."""
@@ -43,61 +44,68 @@ def _navbar_control(driver, click_name: str | None = None) -> list:
     return matchday_list
 
 
-def _check_matches(driver, matchday_name: str, base_url: str) -> list[str]:
+def _read_matches(driver) -> list[tuple[str, str]]:
+    matches = []
+    for row in driver.find_elements(By.XPATH, MATCH_ROWS_XPATH):
+        if not row.is_displayed():
+            continue
+        match_id = row.get_attribute("data-match")
+        if not match_id:
+            continue
+        try:
+            home_team = row.find_element(By.XPATH, HOME_TEAM_XPATH).text.strip()
+        except Exception:
+            home_team = ""
+        matches.append((match_id, home_team))
+    return matches
 
-    def _read_ids() -> list[str]:
-        return [
-            mid for row in driver.find_elements(By.XPATH, MATCH_ROWS_XPATH)
-            if row.is_displayed() and (mid := row.get_attribute("data-match"))
-        ]
 
-    match_ids = _read_ids()
-    if len(match_ids) >= MIN_MATCHES_PER_ROUND:
-        return match_ids
+def _check_matches(driver, matchday_name: str, base_url: str) -> list:
+    matches = _read_matches(driver)
+    if len(matches) >= MIN_MATCHES_PER_ROUND:
+        return matches
 
     for attempt in range(1, MAX_RETRIES + 1):
-        count = len(match_ids)
-        if count == 0:
-            print(f"  [{matchday_name}] No match rows found (attempt {attempt}/{MAX_RETRIES}) reloading...")
-        else:
-            print(
-                f"  [{matchday_name}] Only {count} match(es) detected "
-                f"(expected ≥{MIN_MATCHES_PER_ROUND}), attempt {attempt}/{MAX_RETRIES} — "
-                f"waiting {RETRY_WAIT}s then reloading base URL..."
-            )
-
+        print(
+            f"  [{matchday_name}] Only {len(matches)} match(es) detected "
+            f"(expected ≥{MIN_MATCHES_PER_ROUND}), attempt {attempt}/{MAX_RETRIES} "
+            f"waiting {RETRY_WAIT}s then reloading..."
+        )
         time.sleep(RETRY_WAIT)
 
         # error: not enough matches go full reload
         driver.get(base_url)
         time.sleep(PAGE_LOAD_WAIT)
         _navbar_control(driver, click_name=matchday_name)
+        matches = _read_matches(driver)
+        if len(matches) >= MIN_MATCHES_PER_ROUND:
+            return matches
 
-        match_ids = _read_ids()
-        if len(match_ids) >= MIN_MATCHES_PER_ROUND:
-            return match_ids
-
-    print(f"  [{matchday_name}] Proceeding with {len(match_ids)} match(es) after {MAX_RETRIES} retries")
-    return match_ids
+    print(f"  [{matchday_name}] Proceeding with {len(matches)} match(es) after {MAX_RETRIES} retries")
+    return matches
 
 
-def _scrape_matchday(driver, matchday_name: str, done_registry: dict, base_url: str) -> dict:
+def _scrape_matchday(driver, matchday_name: str, base_url: str) -> dict:
     """For each match in the current matchday: click, parse, go back."""
-    match_ids = _check_matches(driver, matchday_name, base_url)
+    matches = _check_matches(driver, matchday_name, base_url)
 
-    if not match_ids:
+    if not matches:
         print(f"  [{matchday_name}] No match rows found skipping")
         return {}
 
-    print(f"  [{matchday_name}] Found {len(match_ids)} matches")
+    print(f"  [{matchday_name}] Found {len(matches)} matches")
     results = {}
 
-    for match_id in match_ids:
+    for match_id, home_team in matches:
+        # Check done before going to match page
+        if is_match_done(matchday_name, home_team):
+            print(f"    [{matchday_name}] {home_team}, already done, skipping")
+            continue
+
         try:
+            # Re-locate row by match_id 
             row = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located(
-                    (By.XPATH, f"//tbody[@data-match='{match_id}']")
-                )
+                EC.presence_of_element_located((By.XPATH, f"//tbody[@data-match='{match_id}']"))
             )
             row.find_element(By.XPATH, MATCH_DIVIDER_XPATH).click()
             time.sleep(MATCH_PAGE_WAIT)
@@ -105,22 +113,9 @@ def _scrape_matchday(driver, matchday_name: str, done_registry: dict, base_url: 
             parsed = parse_match(driver)
             match_data = {"match_id": match_id, "matchday": matchday_name, **parsed}
 
-            if is_match_done(match_data, done_registry):
-                print(f"    [{matchday_name}] Match {match_id} - already done, skipping")
-                driver.back()
-                time.sleep(CLICK_WAIT)
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, MATCH_ROWS_XPATH))
-                )
-                continue
-
-            results[match_id] = match_data
-            print(f"    [{matchday_name}] Match {match_id} - {parsed.get('home_team')} vs {parsed.get('away_team')}")
-
             saved_path = save_partial_match(matchday_name, match_data)
-            print(f"    [{matchday_name}] Saved partial {saved_path}")
-
-            mark_match_done(match_data, done_registry)
+            results[match_id] = match_data
+            print(f"    [{matchday_name}] {parsed.get('home_team')} vs {parsed.get('away_team')} {saved_path}")
 
             # Navigate back
             driver.back()
@@ -132,13 +127,11 @@ def _scrape_matchday(driver, matchday_name: str, done_registry: dict, base_url: 
             )
 
         except Exception as e:
-            print(f"    [{matchday_name}] Match {match_id} — error: {e}")
+            print(f"    [{matchday_name}] Match {match_id} - error: {e}")
 
     return results
 
 def scrape_all_matchdays(driver, url: str) -> dict:
-    done_registry = load_done_matches()
-
     print(f"Loading: {url}")
     driver.get(url)
     time.sleep(PAGE_LOAD_WAIT)
@@ -154,8 +147,8 @@ def scrape_all_matchdays(driver, url: str) -> dict:
     for name in matchday_names:
         print(f"\n[{name}] Selecting...")
         _navbar_control(driver, click_name=name)
-        all_results[name] = _scrape_matchday(driver, name, done_registry, url)
-        print(f"  [{name}] Done — {len(all_results[name])} matches saved")
+        all_results[name] = _scrape_matchday(driver, name, url)
+        print(f"  [{name}] Done - {len(all_results[name])} matches saved")
 
 
     return all_results
