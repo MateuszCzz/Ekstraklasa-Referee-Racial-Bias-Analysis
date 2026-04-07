@@ -14,7 +14,7 @@ BASE_URL = "https://optaplayerstats.statsperform.com/en_GB/soccer/ekstraklasa-20
 def main() -> None:
     ensure_data_dir(DATA_DIR)
 
-    driver = create_driver(False)
+    driver = create_driver()
     try:
         matchdays = scrape_all_matchdays(driver, BASE_URL)
     finally:
