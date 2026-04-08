@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 from driver import create_driver
 from storage import ensure_data_dir, save_json
@@ -8,9 +9,12 @@ BASE_URL = "https://optaplayerstats.statsperform.com/en_GB/soccer/ekstraklasa-20
 
 
 def main() -> None:
-    ensure_data_dir(DATA_DIR)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--headless", action="store_true", default=False, help="Run browser in headless mode")
+    args = parser.parse_args()
 
-    driver = create_driver()
+    ensure_data_dir(DATA_DIR)
+    driver = create_driver(headless=args.headless)
     try:
         matchdays = scrape_all_matchdays(driver, BASE_URL)
     finally:
