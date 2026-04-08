@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 PARTIAL_DIR = Path("data/partial")
+_PL = str.maketrans("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ", "acelnoszzACELNOSZZ")
 
 def ensure_data_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
@@ -17,8 +18,7 @@ def load_json(path: Path) -> dict:
         return json.load(f)
 
 def _clean_text(text: str, max_len: int = 10) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9]", "", text)
-    return cleaned[:max_len]
+    return re.sub(r"[^A-Za-z0-9]", "", text.translate(_PL))[:max_len]
 
 def _partial_path(matchday_name: str, home_team: str) -> Path:
     nums = re.findall(r"\d+", matchday_name)
