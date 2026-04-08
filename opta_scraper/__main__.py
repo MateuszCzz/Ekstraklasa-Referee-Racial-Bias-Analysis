@@ -3,7 +3,7 @@ from driver import create_driver
 from storage import ensure_data_dir, save_json
 from collector import scrape_all_matchdays
 
-DATA_DIR = Path("data")
+DATA_DIR = Path("data/optascraper")
 BASE_URL = "https://optaplayerstats.statsperform.com/en_GB/soccer/ekstraklasa-2024-2025/18h2pva09qsgp7eu1en46pzis/results"
 
 

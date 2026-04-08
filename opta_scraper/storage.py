@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-PARTIAL_DIR = Path("data/partial")
+PARTIAL_DIR = Path("data/optascraper/partial")
 _PL = str.maketrans("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ", "acelnoszzACELNOSZZ")
 
 def ensure_data_dir(path: Path) -> None:
