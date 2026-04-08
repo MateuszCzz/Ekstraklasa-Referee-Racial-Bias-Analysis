@@ -21,7 +21,7 @@ MATCHDAY_ITEMS_XPATH  = "//ul[@class='Opta-Cf']//li/a"
 MATCH_ROWS_XPATH      = "//tbody[contains(@class,'Opta-fixture')]"
 MATCH_DIVIDER_XPATH   = ".//td[@class='Opta-Divider Opta-Dash']"
 HOME_TEAM_XPATH       = ".//td[contains(@class,'Opta-Home')]"
-
+COOKIES_DENY_BUTTON_XPATH = "//*[@id='deny']"
 
 def _navbar_control(driver, click_name: str | None = None) -> list:
     """Open navbar if needed, click element and return matchday list."""
@@ -43,6 +43,28 @@ def _navbar_control(driver, click_name: str | None = None) -> list:
 
     return matchday_list
 
+def _deny_cookie_banner(driver):
+    try:
+        # Wait for div with shadow dom
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "usercentrics-cmp-ui"))
+        )
+        
+        # find shadow DOM, click deny
+        driver.execute_script("""
+            const host = document.getElementById('usercentrics-cmp-ui');
+            const shadowRoot = host.shadowRoot;
+            const denyBtn = shadowRoot.getElementById('deny');
+            if (denyBtn) denyBtn.click();
+        """)
+        
+        # Wait for banner to disappear
+        WebDriverWait(driver, 5).until(
+            EC.invisibility_of_element_located((By.ID, "usercentrics-cmp-ui"))
+        )
+        
+    except Exception:
+        pass  # no banner, continue normally
 
 def _read_matches(driver) -> list[tuple[str, str]]:
     matches = []
@@ -135,6 +157,9 @@ def scrape_all_matchdays(driver, url: str) -> dict:
     print(f"Loading: {url}")
     driver.get(url)
     time.sleep(PAGE_LOAD_WAIT)
+
+    # click cookie banner deny
+    _deny_cookie_banner(driver)
 
     matchday_names = [x.text.strip() for x in _navbar_control(driver) if x.text.strip()]
 
