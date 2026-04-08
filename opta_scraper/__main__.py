@@ -1,8 +1,4 @@
-import argparse
 from pathlib import Path
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from driver import create_driver
 from storage import ensure_data_dir, save_json
 from collector import scrape_all_matchdays
