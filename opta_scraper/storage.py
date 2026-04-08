@@ -26,8 +26,8 @@ def _partial_path(matchday_name: str, home_team: str) -> Path:
     filename = f"matchday_{md_num}_game_{_clean_text(home_team, 10)}.json"
     return PARTIAL_DIR / filename
 
-def save_partial_match(matchday_name: str, match_data: dict) -> Path:
-    dest = _partial_path(matchday_name, match_data.get("home_team", "unknown"))
+def save_partial_match(matchday_name: str, match_data: dict, short_home_name: str) -> Path:
+    dest = _partial_path(matchday_name, short_home_name)
     save_json(dest, match_data)
     return dest
 

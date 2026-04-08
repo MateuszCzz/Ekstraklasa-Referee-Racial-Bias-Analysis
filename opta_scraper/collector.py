@@ -135,7 +135,7 @@ def _scrape_matchday(driver, matchday_name: str, base_url: str) -> dict:
             parsed = parse_match(driver)
             match_data = {"match_id": match_id, "matchday": matchday_name, **parsed}
 
-            saved_path = save_partial_match(matchday_name, match_data)
+            saved_path = save_partial_match(matchday_name, match_data, home_team)
             results[match_id] = match_data
             print(f"    [{matchday_name}] {parsed.get('home_team')} vs {parsed.get('away_team')} {saved_path}")
 
