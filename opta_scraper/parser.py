@@ -5,10 +5,10 @@ from selenium.webdriver.support import expected_conditions as EC
 
 MATCHDATA_CSS  = "div.Opta-Matchdata"
 TABS_CSS       = "div.Opta-Cf.Opta-Tabs.Opta-TabsMore"
-STATS_TABLE    = "table.Opta-Striped"
-MATCHDATA_WAIT = 10
-SCROLL_PAUSE   = 1.0
-TAB_PAUSE      = 1.0
+STATS_TABLE_CSS    = "table.Opta-Striped"
+MATCHDATA_WAIT = 10 # delay for elements to become visible
+SCROLL_PAUSE   = 1.0 # delay after scrolling
+TAB_PAUSE      = 2.0 # delay after clicking button in the player statistics table
 
 
 def _parse_meta(driver) -> dict:
@@ -62,11 +62,11 @@ def _parse_stats_table(driver) -> list[dict]:
     WebDriverWait(driver, MATCHDATA_WAIT).until(
         lambda d: any(
             th.text.strip()
-            for th in d.find_elements(By.CSS_SELECTOR, f"{STATS_TABLE} tbody th.Opta-Player")
+            for th in d.find_elements(By.CSS_SELECTOR, f"{STATS_TABLE_CSS} tbody th.Opta-Player")
         )
     )
 
-    table = driver.find_element(By.CSS_SELECTOR, STATS_TABLE)
+    table = driver.find_element(By.CSS_SELECTOR, STATS_TABLE_CSS)
 
     # column headers
     headers = []
@@ -138,6 +138,6 @@ def parse_match(driver) -> dict:
             _click_table_nav(driver, team)
             result[key] = _parse_stats_table(driver)
         except Exception as e:
-            print(f"    [parser] Stats for '{team}' — error: {e}")
+            print(f"    [parser] Stats for '{team}' error: {e}")
 
     return result
