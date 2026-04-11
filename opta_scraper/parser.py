@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 MATCHDATA_CSS  = "div.Opta-Matchdata"
 TABS_CSS       = "div.Opta-Cf.Opta-Tabs.Opta-TabsMore"
 STATS_TABLE_CSS    = "table.Opta-Striped"
+STATS_TABLE_ACTIVE_CSS = "ul.Opta-TabbedContent li.Opta-On"
 MATCHDATA_WAIT = 10 # delay for elements to become visible
 SCROLL_PAUSE   = 1.0 # delay after scrolling
 TAB_PAUSE      = 2.0 # delay after clicking button in the player statistics table
@@ -58,6 +59,7 @@ def _is_empty_row(row: dict) -> bool:
 
 def _parse_stats_table(driver) -> list[dict]:
     """Parse table of players data"""
+
     # wait till at least one player populated
     WebDriverWait(driver, MATCHDATA_WAIT).until(
         lambda d: any(
@@ -66,11 +68,14 @@ def _parse_stats_table(driver) -> list[dict]:
         )
     )
 
-    table = driver.find_element(By.CSS_SELECTOR, STATS_TABLE_CSS)
+    # filter out by active li
+    active_li = driver.find_element(By.CSS_SELECTOR, STATS_TABLE_ACTIVE_CSS)
+    table = active_li.find_element(By.CSS_SELECTOR, STATS_TABLE_CSS)
 
     # column headers
     headers = []
     for th in table.find_elements(By.CSS_SELECTOR, "thead th"):
+        
         abbr = th.find_elements(By.TAG_NAME, "abbr")
         if abbr:
             headers.append(abbr[0].get_attribute("title").strip().lower().replace(" ", "_"))
