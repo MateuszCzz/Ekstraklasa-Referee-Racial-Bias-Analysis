@@ -74,7 +74,7 @@ def _parse_score(driver) -> dict:
 
 def _is_empty_row(row: dict) -> bool:
     for key, val in row.items():
-        if key == "player":
+        if key == "player" and val != "Total":
             continue
         v = str(val).strip()
         if v and v not in ("-", "—", "–", ""):
