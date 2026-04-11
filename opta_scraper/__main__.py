@@ -5,6 +5,7 @@ from storage import ensure_data_dir, save_json
 from collector import scrape_all_matchdays
 
 DATA_DIR = Path("data/optascraper")
+RESULT_DIR = DATA_DIR / "result"
 BASE_URL = "https://optaplayerstats.statsperform.com/en_GB/soccer/ekstraklasa-2024-2025/18h2pva09qsgp7eu1en46pzis/results"
 
 
@@ -24,8 +25,8 @@ def main() -> None:
         print("No matchday data found - check selectors or page load")
         return
 
-    save_json(DATA_DIR / "matchdays.json", matchdays)
-    print(f"\nSaved to {DATA_DIR / 'matchdays.json'}")
+    save_json(RESULT_DIR / "matchdays.json", matchdays)
+    print(f"\nSaved to {RESULT_DIR / 'matchdays.json'}")
 
 if __name__ == "__main__":
     main()
