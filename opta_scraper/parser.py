@@ -1,4 +1,4 @@
-import time
+import time, re
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -7,10 +7,25 @@ MATCHDATA_CSS  = "div.Opta-Matchdata"
 TABS_CSS       = "div.Opta-Cf.Opta-Tabs.Opta-TabsMore"
 STATS_TABLE_CSS    = "table.Opta-Striped"
 STATS_TABLE_ACTIVE_CSS = "ul.Opta-TabbedContent li.Opta-On"
+TIMELINE_BAR_CSS  = "div.Opta-Cf.Opta-Timeline-Bar"
+HOME_EVENTS_CSS   = "ul.Opta-Events.Opta-Home li.Opta-MatchEvent"
+AWAY_EVENTS_CSS   = "ul.Opta-Events.Opta-Away li.Opta-MatchEvent"
+
 MATCHDATA_WAIT = 10 # delay for elements to become visible
 SCROLL_PAUSE   = 1.0 # delay after scrolling
 TAB_PAUSE      = 2.0 # delay after clicking button in the player statistics table
 
+# Map of icon CSS to event types
+_ICON_CSS_TO_EVENT = {
+    "Opta-IconGoal":    "goal",
+    "Opta-IconPenGoal": "penalty_scored",
+    "Opta-IconPenMiss": "missed_penalty",
+    "Opta-IconYellow":  "yellow",
+    "Opta-IconRed":     "red",
+    "Opta-IconDouble":  "second_yellow",
+    "Opta-IconSubstitution":    "substitution",
+    "Opta-IconOwn":     "own_goal"
+}
 
 def _parse_meta(driver) -> dict:
     """Extract matchdata referee/venue/attendance + team names + date."""
@@ -136,7 +151,6 @@ def _parse_stats_table(driver) -> list[dict]:
 
     return players
 
-
 def _click_table_nav(driver, team_name: str) -> None:
     """Click the tab matching team_name"""
     for a in driver.find_element(By.CSS_SELECTOR, TABS_CSS).find_elements(By.TAG_NAME, "a"):
@@ -146,6 +160,109 @@ def _click_table_nav(driver, team_name: str) -> None:
             return
     raise ValueError(f"Tab for '{team_name}' not found")
 
+def _parse_minute(raw: str) -> tuple[int, bool]:
+    # strip
+    cleaned = re.sub(r"[^\d+]", "", raw)
+    match = re.match(r"(\d+)\+(\d+)", cleaned)
+    if match:
+        base, extra = int(match.group(1)), int(match.group(2))
+        minute = base + extra
+    else:
+        minute = int(cleaned) if cleaned else 0
+
+    # if < 45 or 45 + x its first half
+    base_val = int(match.group(1)) if match else minute
+    is_first_half = base_val <= 45
+    return minute, is_first_half
+
+def _parse_timeline_events(driver, css: str, is_home: bool) -> list[dict]:
+    """Parse all <li> events from Opta-Events list."""
+    events = []
+
+    bar = driver.find_element(By.CSS_SELECTOR, TIMELINE_BAR_CSS)
+    lis = bar.find_elements(By.CSS_SELECTOR, css)
+
+    for li in lis:
+        # get icon / event type 
+        icon_cls = ""
+        try:
+            icon_p = li.find_element(By.CSS_SELECTOR, "div.Opta-JS-Tip > p")
+            classes = icon_p.get_attribute("class").split()
+            for cls in classes:
+                if cls.startswith("Opta-Icon") and cls != "Opta-Icon":
+                    icon_cls = cls
+                    break
+        except Exception:
+            print(f"    [parser timeline] failed to find icon'")
+            pass
+
+        event_type = _ICON_CSS_TO_EVENT.get(icon_cls)
+        if not event_type:
+            print(f"    [parser timeline] Unknown icon '{icon_cls}'")
+            continue
+        
+        # get hidden div with all info
+        try:
+            hidden_span = li.find_element(By.CSS_SELECTOR, "span.Opta-Hidden")
+        except Exception:
+            print(f"    [parser timeline] failed to find hidden span with info'")
+            continue
+
+        # get minute
+        try:
+            min_raw = hidden_span.find_element(By.CSS_SELECTOR, "h3 span.Opta-Event-Min").get_attribute("textContent").strip()
+            minute, is_first_half = _parse_minute(min_raw)
+        except Exception:
+            print(f"    [parser timeline] failed to get minute of event '{min_raw}' -> '{minute}' : '{is_first_half}'")
+            continue
+
+        # get players involved
+        player_divs = hidden_span.find_elements(By.CSS_SELECTOR, "div")
+
+        player = None
+        second_player = None
+
+        if player_divs:
+            # first div with player
+            try:
+                first_p = player_divs[0].find_element(By.CSS_SELECTOR, "p")
+                player = first_p.get_attribute("textContent").strip()
+            except Exception:
+                print(f"    [parser timeline] failed to find div with first player'")
+                pass
+
+        if len(player_divs) >= 2:
+            try:
+                second_p = player_divs[1].find_element(By.CSS_SELECTOR, "p")
+                raw = second_p.get_attribute("textContent").strip()
+
+                # if required sub/assist get second player
+                if event_type == "substitution":
+                    second_player = raw
+                elif raw.startswith("Assist:"):
+                    second_player = raw.replace("Assist:", "").strip()
+            except Exception:
+                print(f"    [parser timeline] failed to find div with second player'")
+                pass
+
+        events.append({
+            "minute":         minute,
+            "event_type":     event_type,
+            "player":         player,
+            "second_player":  second_player,
+            "is_home_team":   is_home,
+            "is_first_half":  is_first_half,
+        })
+
+    return events
+
+def _parse_match_timeline(driver) -> list[dict]:
+    """Parse home then away timeline events from Timeline Bar."""
+    timeline = []
+    timeline.extend(_parse_timeline_events(driver, HOME_EVENTS_CSS, is_home=True))
+    timeline.extend(_parse_timeline_events(driver, AWAY_EVENTS_CSS, is_home=False))
+
+    return timeline
 
 def parse_match(driver) -> dict:
     """Parse all data from the currently loaded match page"""
@@ -153,7 +270,7 @@ def parse_match(driver) -> dict:
     # get meta info
     result = _parse_meta(driver)
 
-    # add score + result
+    # get score + result
     result.update(_parse_score(driver))
     
     # scroll down, then wait for table to become visible
@@ -163,9 +280,9 @@ def parse_match(driver) -> dict:
         EC.visibility_of_element_located((By.CSS_SELECTOR, TABS_CSS))
     )
 
+    # get individual player match stats
     result["home_stats"] = []
     result["away_stats"] = []
-
     for team, key in ((result.get("home_team"), "home_stats"), (result.get("away_team"), "away_stats")):
         if not team:
             continue
@@ -175,4 +292,7 @@ def parse_match(driver) -> dict:
         except Exception as e:
             print(f"    [parser] Stats for '{team}' error: {e}")
 
+    # get match timeline
+    result["match_timeline"] = _parse_match_timeline(driver)
+    
     return result
