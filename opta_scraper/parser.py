@@ -46,6 +46,31 @@ def _parse_meta(driver) -> dict:
 
     return result
 
+def _parse_score(driver) -> dict:
+    """Extract home/away goals."""
+
+    result = {}
+
+    # get goals
+    try:
+        home_td = driver.find_element(By.CSS_SELECTOR, "td.Opta-Score.Opta-Home")
+        result["home_goals"] = int(home_td.find_element(By.CSS_SELECTOR, "span.Opta-Team-Score").text.strip())
+
+        away_td = driver.find_element(By.CSS_SELECTOR, "td.Opta-Score.Opta-Away")
+        result["away_goals"] = int(away_td.find_element(By.CSS_SELECTOR, "span.Opta-Team-Score").text.strip())
+
+    except Exception as e:
+        print(f"    [parser] Score parsing error: {e}")
+
+    # set result
+    if result["home_goals"] > result["away_goals"]:
+        result["result"] = "W"
+    elif result["home_goals"] < result["away_goals"]:
+        result["result"] = "L"
+    else:
+        result["result"] = "D"
+
+    return result
 
 def _is_empty_row(row: dict) -> bool:
     for key, val in row.items():
@@ -124,8 +149,13 @@ def _click_table_nav(driver, team_name: str) -> None:
 
 def parse_match(driver) -> dict:
     """Parse all data from the currently loaded match page"""
+
+    # get meta info
     result = _parse_meta(driver)
 
+    # add score + result
+    result.update(_parse_score(driver))
+    
     # scroll down, then wait for table to become visible
     driver.execute_script("window.scrollBy(0, 600);")
     time.sleep(SCROLL_PAUSE)
