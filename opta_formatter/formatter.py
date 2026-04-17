@@ -18,10 +18,6 @@ EVENT_TYPES: list[str] = [ "goal", "substitution", "yellow", "red", "second_yell
 # away_score 
 # result
 
-# dimPlayer:
-# id int PK
-# name
-
 # factPlayerMatchStats:
 # id int PK
 # player_key id int FK
@@ -76,8 +72,29 @@ def build_dim_team(matches: list[dict]) -> pd.DataFrame:
     teams = sorted({m["home_team"] for m in matches} | {m["away_team"] for m in matches})
     return pd.DataFrame({"name": teams})
 
+def build_dim_player(matches: list[dict]) -> pd.DataFrame:
+    players = sorted({
+        (r["player"], team)
+        for m in matches
+        for team, side in ((m["home_team"], "home_stats"), (m["away_team"], "away_stats"))
+        for r in m[side]
+        if r["player"] != "Total"
+    })
+    return pd.DataFrame(
+        [{"id": i, "name": name, "team": team} for i, (name, team) in enumerate(players, start=1)]
+    )
+
 def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     matches = list(_iter_matches(matchdays))
+
+    # iter over all matches collecting players, enumerating and differentiating by team
+    # results in 2 types of data problem:
+    # - dublication by team ie. Mosór played for both Piast and Raków
+    # - dublication due to surce inconsistency R. Gikiewicz / Rafał Tadeusz Gikiewicz are the same person
+    # first is required to the lower chance of records being squashed due to players with same name playing in the league. Chance of 2 players with same name is high, chance of both of them playing for same team is relatively minimal
+    # chance of above happening is increased due to source using short for first names
+    # both problems have to be solved in data enrichment stage later
+    player_df = build_dim_player(matches)
 
     return {
         "dimDate":              build_dim_date(),
@@ -85,4 +102,5 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
         "dimReferee":           build_dim_referee(matches),
         "dimVenue":             build_dim_venue(matches),
         "dimTeam":              build_dim_team(matches),
+        "dimPlayer":            player_df,
     }
