@@ -21,10 +21,6 @@ EVENT_TYPES: list[str] = [ "goal", "substitution", "yellow", "red", "second_yell
 # dimTeam:
 # name
 
-# dimReferee:
-# id int PK
-# name
-
 # dimVenue:
 # name
 
@@ -63,14 +59,26 @@ EVENT_TYPES: list[str] = [ "goal", "substitution", "yellow", "red", "second_yell
 # isHomeTeam bool
 # isFirstHalf    
 
+def _iter_matches(matchdays: dict):
+    """Yield every match dict regardless of matchday nesting."""
+    for matchday_matches in matchdays.values():
+        yield from matchday_matches.values()
+
 def build_dim_date() -> pd.DataFrame:
     return pd.DataFrame({"date": pd.date_range(DATA_START_DATE, DATA_END_DATE, freq="D")})
 
 def build_dim_event_type() -> pd.DataFrame:
     return pd.DataFrame({"name": EVENT_TYPES})
 
+def build_dim_referee(matches: list[dict]) -> pd.DataFrame:
+    refs = sorted({m["referee"] for m in matches})
+    return pd.DataFrame({"id": range(1, len(refs) + 1), "name": refs})
+
 def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
+    matches = list(_iter_matches(matchdays))
+
     return {
         "dimDate":              build_dim_date(),
         "dimEventType":         build_dim_event_type(),
+        "dimReferee":           build_dim_referee(matches),
     }
