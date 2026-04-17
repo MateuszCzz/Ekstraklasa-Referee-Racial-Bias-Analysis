@@ -2,6 +2,7 @@ import pandas as pd
 
 DATA_START_DATE = "2023-01-01"
 DATA_END_DATE   = "2024-12-12"
+EVENT_TYPES: list[str] = [ "goal", "substitution", "yellow", "red", "second_yellow", "missed_penalty", "penalty_scored", "own_goal" ]
 
 # schema missing:
 # dimMatch:
@@ -52,9 +53,6 @@ DATA_END_DATE   = "2024-12-12"
 # fouls_won
 # saves
 
-# dimEventType:
-# name: (goal,subbstitution,yellow,red,secondyellow,missed penalty,penaltyscored)
-
 # factMatchTimeline:
 # timeline_key       id int PK
 # match_key id int FK
@@ -68,7 +66,11 @@ DATA_END_DATE   = "2024-12-12"
 def build_dim_date() -> pd.DataFrame:
     return pd.DataFrame({"date": pd.date_range(DATA_START_DATE, DATA_END_DATE, freq="D")})
 
+def build_dim_event_type() -> pd.DataFrame:
+    return pd.DataFrame({"name": EVENT_TYPES})
+
 def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     return {
         "dimDate":              build_dim_date(),
+        "dimEventType":         build_dim_event_type(),
     }
