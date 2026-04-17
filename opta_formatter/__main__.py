@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from storage import ensure_data_dir, load_json, save_tables
 from formatter import build_tables
 
 SCRAPER_INPUT_DIR   = Path("data/optascraper/result")
@@ -39,6 +40,7 @@ def main() -> None:
     tables = build_tables(matchdays)
 
     # save
+    save_tables(tables, output_dir)
 
     # print done
     print(f"\nSaved {len(tables)} tables to {output_dir}")
