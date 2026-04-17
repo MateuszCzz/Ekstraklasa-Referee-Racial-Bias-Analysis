@@ -72,7 +72,8 @@ def build_dim_referee(matches: list[dict]) -> pd.DataFrame:
     return pd.DataFrame({"id": range(1, len(refs) + 1), "name": refs})
 
 def build_dim_venue(matches: list[dict]) -> pd.DataFrame:
-    return pd.DataFrame({"name": sorted({m["venue"] for m in matches})})
+    rows = sorted({(m["venue"], m["home_team"]) for m in matches})
+    return pd.DataFrame(rows, columns=["name", "home_team"])
 
 def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     matches = list(_iter_matches(matchdays))
