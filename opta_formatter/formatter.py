@@ -21,9 +21,6 @@ EVENT_TYPES: list[str] = [ "goal", "substitution", "yellow", "red", "second_yell
 # dimTeam:
 # name
 
-# dimVenue:
-# name
-
 # dimPlayer:
 # id int PK
 # name
@@ -74,6 +71,9 @@ def build_dim_referee(matches: list[dict]) -> pd.DataFrame:
     refs = sorted({m["referee"] for m in matches})
     return pd.DataFrame({"id": range(1, len(refs) + 1), "name": refs})
 
+def build_dim_venue(matches: list[dict]) -> pd.DataFrame:
+    return pd.DataFrame({"name": sorted({m["venue"] for m in matches})})
+
 def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     matches = list(_iter_matches(matchdays))
 
@@ -81,4 +81,5 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
         "dimDate":              build_dim_date(),
         "dimEventType":         build_dim_event_type(),
         "dimReferee":           build_dim_referee(matches),
+        "dimVenue":             build_dim_venue(matches),
     }
