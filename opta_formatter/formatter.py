@@ -18,12 +18,12 @@ def _get_nr_from_matchday(label: str) -> int | None:
     parts = label.split()
     return int(parts[-1]) if parts and parts[-1].isdigit() else None
 
-def _parse_attendance(value: str) -> int:
+def _parse_attendance(value: str) -> int|str:
     try:
         return int(value.replace(",", ""))
     except (ValueError, AttributeError):
-        print(f"Could not parse attendance: {value!r}, defaulting to 0")
-        return 0
+        print(f"Could not parse attendance: {value!r}, defaulting to empty string")
+        return " "
     
 def build_dim_date() -> pd.DataFrame:
     return pd.DataFrame({"date": pd.date_range(DATA_START_DATE, DATA_END_DATE, freq="D")})
@@ -66,8 +66,8 @@ def build_dim_match(matches: list[dict]) -> pd.DataFrame:
             "referee": m["referee"],
             "venue": m["venue"],
             "matchday_nr": _get_nr_from_matchday(m["matchday"]),
-            # in case of data with no attendance default to 0 fix in power bi etl
-            "attendance": _parse_attendance(m.get("attendance", "")),
+            # in case of data with no attendance default to " " fix in power bi etl
+            "attendance": _parse_attendance(m.get("attendance", " ")),
             "home_score": m["home_goals"],
             "away_score": m["away_goals"],
             "result": m["result"],
