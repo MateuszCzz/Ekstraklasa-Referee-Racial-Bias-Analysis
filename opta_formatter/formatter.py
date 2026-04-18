@@ -37,7 +37,9 @@ def build_dim_referee(matches: list[dict]) -> pd.DataFrame:
 
 def build_dim_venue(matches: list[dict]) -> pd.DataFrame:
     rows = sorted({(m["venue"], m["home_team"]) for m in matches})
-    return pd.DataFrame(rows, columns=["name", "home_team"])
+    df = pd.DataFrame(rows, columns=["name", "home_team"])
+    df.insert(0, "id", range(1, len(df) + 1))
+    return df
 
 def build_dim_team(matches: list[dict]) -> pd.DataFrame:
     teams = sorted({m["home_team"] for m in matches} | {m["away_team"] for m in matches})
@@ -55,7 +57,9 @@ def build_dim_player(matches: list[dict]) -> pd.DataFrame:
         [{"id": i, "name": name, "team": team} for i, (name, team) in enumerate(players, start=1)]
     )
 
-def build_dim_match(matches: list[dict]) -> pd.DataFrame:
+def build_dim_match(matches: list[dict], venue_df: pd.DataFrame) -> pd.DataFrame:
+    venue_id_map = venue_df.set_index(["name", "home_team"])["id"]
+
     rows = [
         {
             "match_id": i,
@@ -64,7 +68,8 @@ def build_dim_match(matches: list[dict]) -> pd.DataFrame:
             "home_team": m["home_team"],
             "away_team": m["away_team"],
             "referee": m["referee"],
-            "venue": m["venue"],
+            # instead of name map id based on name+hometeam
+            "venue_id": venue_id_map.get((m["venue"], m["home_team"])),
             "matchday_nr": _get_nr_from_matchday(m["matchday"]),
             # in case of data with no attendance default to " " fix in power bi etl
             "attendance": _parse_attendance(m.get("attendance", " ")),
@@ -129,15 +134,16 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     # chance of above happening is increased due to source using short for first names
     # both problems have to be solved in data enrichment stage later
     player_df = build_dim_player(matches)
+    venue_df = build_dim_venue(matches)
 
     tables = {
         "dimDate":              build_dim_date(),
         "dimEventType":         build_dim_event_type(),
         "dimReferee":           build_dim_referee(matches),
-        "dimVenue":             build_dim_venue(matches),
+        "dimVenue":             venue_df,
         "dimTeam":              build_dim_team(matches),
         "dimPlayer":            player_df,
-        "dimMatch":             build_dim_match(matches),
+        "dimMatch":             build_dim_match(matches,venue_df),
         "factPlayerMatchStats": build_fact_player_stats(matches),
         "factMatchTimeline":    build_fact_timeline(matches),
     }
@@ -149,5 +155,5 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
         tables[name]["match_id"] = tables[name]["source_match_id"].map(match_ids_map)
         tables[name].drop(columns="source_match_id", inplace=True)
     tables["dimMatch"].drop(columns="source_match_id", inplace=True)
-    
+
     return tables
