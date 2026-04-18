@@ -59,7 +59,7 @@ def build_dim_match(matches: list[dict]) -> pd.DataFrame:
     rows = [
         {
             "match_id": i,
-            "surce_match_id": m["match_id"],
+            "source_match_id": m["match_id"],
             "date": pd.to_datetime(m["date"], format="%d %B %Y %H:%M"),
             "home_team": m["home_team"],
             "away_team": m["away_team"],
@@ -92,7 +92,7 @@ def build_fact_player_stats(matches: list[dict]) -> pd.DataFrame:
             "id": sid,
             "player": row["player"],
             "team": m["home_team"] if is_home else m["away_team"],
-            "surce_match_id": m["match_id"],
+            "source_match_id": m["match_id"],
             "is_home_team": is_home,
             **{col: int(row[col]) for col in STAT_COLS},
         })
@@ -107,7 +107,7 @@ def build_fact_timeline(matches: list[dict]) -> pd.DataFrame:
         team = m["home_team"] if event["is_home_team"] else m["away_team"]
         rows.append({
             "id": tid,
-            "surce_match_id": m["match_id"],
+            "source_match_id": m["match_id"],
             "minute": event["minute"],
             "event_type": event["event_type"],
             "player": event["player"],
@@ -124,7 +124,7 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     # iter over all matches collecting players, enumerating and differentiating by team
     # results in 2 types of data problem:
     # - dublication by team ie. Mosór played for both Piast and Raków
-    # - dublication due to surce inconsistency R. Gikiewicz / Rafał Tadeusz Gikiewicz are the same person
+    # - dublication due to source inconsistency R. Gikiewicz / Rafał Tadeusz Gikiewicz are the same person
     # first is required to the lower chance of records being squashed due to players with same name playing in the league. Chance of 2 players with same name is high, chance of both of them playing for same team is relatively minimal
     # chance of above happening is increased due to source using short for first names
     # both problems have to be solved in data enrichment stage later
