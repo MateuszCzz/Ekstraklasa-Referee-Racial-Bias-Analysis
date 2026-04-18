@@ -4,20 +4,6 @@ DATA_START_DATE = "2023-01-01"
 DATA_END_DATE   = "2024-12-12"
 EVENT_TYPES: list[str] = [ "goal", "substitution", "yellow", "red", "second_yellow", "missed_penalty", "penalty_scored", "own_goal" ]
 
-# schema missing:
-# dimMatch:
-# id int PK
-# date (FK dimDate date)
-# home_team_key (FK dimTeam name)
-# away_team_key (FK dimTeam name)
-# referee_key (FK dimReferee id int FK)
-# venue_key (FK dimVenue name)
-# matchday_nr 
-# attendance 
-# home_score 
-# away_score 
-# result
-
 # factPlayerMatchStats:
 # id int PK
 # player_key id int FK
@@ -54,6 +40,17 @@ def _iter_matches(matchdays: dict):
     for matchday_matches in matchdays.values():
         yield from matchday_matches.values()
 
+def _get_nr_from_matchday(label: str) -> int | None:
+    parts = label.split()
+    return int(parts[-1]) if parts and parts[-1].isdigit() else None
+
+def _parse_attendance(value: str) -> int:
+    try:
+        return int(value.replace(",", ""))
+    except (ValueError, AttributeError):
+        print(f"Could not parse attendance: {value!r}, defaulting to 0")
+        return 0
+    
 def build_dim_date() -> pd.DataFrame:
     return pd.DataFrame({"date": pd.date_range(DATA_START_DATE, DATA_END_DATE, freq="D")})
 
@@ -84,6 +81,27 @@ def build_dim_player(matches: list[dict]) -> pd.DataFrame:
         [{"id": i, "name": name, "team": team} for i, (name, team) in enumerate(players, start=1)]
     )
 
+def build_dim_match(matches: list[dict]) -> pd.DataFrame:
+    rows = [
+        {
+            "match_id": i,
+            "surce_match_id": m["match_id"],
+            "date": pd.to_datetime(m["date"], format="%d %B %Y %H:%M"),
+            "home_team": m["home_team"],
+            "away_team": m["away_team"],
+            "referee": m["referee"],
+            "venue": m["venue"],
+            "matchday_nr": _get_nr_from_matchday(m["matchday"]),
+            # in case of data with no attendance default to 0 fix in power bi etl
+            "attendance": _parse_attendance(m.get("attendance", "")),
+            "home_score": m["home_goals"],
+            "away_score": m["away_goals"],
+            "result": m["result"],
+        }
+        for i, m in enumerate(matches, start=1)
+    ]
+    return pd.DataFrame(rows)
+
 def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     matches = list(_iter_matches(matchdays))
 
@@ -103,4 +121,5 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
         "dimVenue":             build_dim_venue(matches),
         "dimTeam":              build_dim_team(matches),
         "dimPlayer":            player_df,
+        "dimMatch":             build_dim_match(matches),
     }
