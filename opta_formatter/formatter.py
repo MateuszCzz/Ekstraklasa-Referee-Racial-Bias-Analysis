@@ -130,7 +130,7 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     # both problems have to be solved in data enrichment stage later
     player_df = build_dim_player(matches)
 
-    return {
+    tables = {
         "dimDate":              build_dim_date(),
         "dimEventType":         build_dim_event_type(),
         "dimReferee":           build_dim_referee(matches),
@@ -141,3 +141,13 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
         "factPlayerMatchStats": build_fact_player_stats(matches),
         "factMatchTimeline":    build_fact_timeline(matches),
     }
+
+    # iterate over fact tables replace source id with new int id 
+    # drop old columns
+    match_ids_map = tables["dimMatch"].set_index("source_match_id")["match_id"]
+    for name in ("factPlayerMatchStats", "factMatchTimeline"):
+        tables[name]["match_id"] = tables[name]["source_match_id"].map(match_ids_map)
+        tables[name].drop(columns="source_match_id", inplace=True)
+    tables["dimMatch"].drop(columns="source_match_id", inplace=True)
+    
+    return tables
