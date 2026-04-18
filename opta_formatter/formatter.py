@@ -1,7 +1,7 @@
 import pandas as pd
 
-DATA_START_DATE = "2023-01-01"
-DATA_END_DATE   = "2024-12-12"
+DATA_START_DATE = "2024-01-01"
+DATA_END_DATE   = "2025-12-12"
 EVENT_TYPES: list[str] = [ "goal", "substitution", "yellow", "red", "second_yellow", "missed_penalty", "penalty_scored", "own_goal" ]
 STAT_COLS: list[str] = [
     "goals", "assists", "red_cards", "yellow_cards", "corners_won",
