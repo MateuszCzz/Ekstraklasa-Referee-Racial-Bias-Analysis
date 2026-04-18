@@ -3,19 +3,14 @@ import pandas as pd
 DATA_START_DATE = "2023-01-01"
 DATA_END_DATE   = "2024-12-12"
 EVENT_TYPES: list[str] = [ "goal", "substitution", "yellow", "red", "second_yellow", "missed_penalty", "penalty_scored", "own_goal" ]
-
-# factMatchTimeline:
-# timeline_key       id int PK
-# match_key id int FK
-# minute          (int)
-# event_type_key  dimEventType name
-# player_key      id int FK
-# second_player_key id int FK nullable, sub on, or assist on goal
-# isHomeTeam bool
-# isFirstHalf    
+STAT_COLS: list[str] = [
+    "goals", "assists", "red_cards", "yellow_cards", "corners_won",
+    "shots", "shots_on_target", "blocked_shots", "passes", "crosses",
+    "tackles", "offsides", "fouls_conceded", "fouls_won", "saves",
+]
 
 def _iter_matches(matchdays: dict):
-    """Yield every match dict regardless of matchday nesting."""
+    """Yield every match dict"""
     for matchday_matches in matchdays.values():
         yield from matchday_matches.values()
 
@@ -103,6 +98,26 @@ def build_fact_player_stats(matches: list[dict]) -> pd.DataFrame:
         })
     return pd.DataFrame(rows)
 
+def build_fact_timeline(matches: list[dict]) -> pd.DataFrame:
+    rows = []
+    for tid, (m, event) in enumerate(
+        ((m, event) for m in matches for event in m["match_timeline"]),
+        start=1,
+    ):
+        team = m["home_team"] if event["is_home_team"] else m["away_team"]
+        rows.append({
+            "id": tid,
+            "surce_match_id": m["match_id"],
+            "minute": event["minute"],
+            "event_type": event["event_type"],
+            "player": event["player"],
+            "team": team,
+            "second_player": event.get("second_player"),
+            "is_home_team": event["is_home_team"],
+            "is_first_half": event["is_first_half"],
+        })
+    return pd.DataFrame(rows)
+
 def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     matches = list(_iter_matches(matchdays))
 
@@ -124,4 +139,5 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
         "dimPlayer":            player_df,
         "dimMatch":             build_dim_match(matches),
         "factPlayerMatchStats": build_fact_player_stats(matches),
+        "factMatchTimeline":    build_fact_timeline(matches),
     }
