@@ -37,6 +37,15 @@ def main() -> None:
         metavar="DIR",
         help="Where to write results to (default: {RESULT_DIR})",
     )
+
+    #arg test
+    parser.add_argument(
+        "--test",
+        type=bool,
+        default=False,
+        metavar="DIR",
+        help="Limit operations to first 3 rows for a test run (default: {False})",
+    )
     args = parser.parse_args()
 
     output_dir = args.data_out or RESULT_DIR
