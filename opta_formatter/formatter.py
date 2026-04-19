@@ -39,7 +39,9 @@ def build_dim_venue(matches: list[dict]) -> pd.DataFrame:
 
 def build_dim_team(matches: list[dict]) -> pd.DataFrame:
     teams = sorted({m["home_team"] for m in matches} | {m["away_team"] for m in matches})
-    return pd.DataFrame({"name": teams})
+    df = pd.DataFrame({"name": teams})
+    df.insert(0, "id", range(1, len(df) + 1))
+    return df
 
 def build_dim_player(matches: list[dict]) -> pd.DataFrame:
     players = sorted({
@@ -143,12 +145,28 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
         "factMatchTimeline":    build_fact_timeline(matches),
     }
 
-    # iterate over fact tables replace source id with new int id 
+    # replace source id with new int one
+    match_id_map = tables["dimMatch"].set_index("source_match_id")["match_id"]
+    tables["factPlayerMatchStats"]["match_id"] = tables["factPlayerMatchStats"]["source_match_id"].map(match_id_map)
+    tables["factMatchTimeline"]["match_id"] = tables["factMatchTimeline"]["source_match_id"].map(match_id_map)
+
+    # map connections to ids instead of strings
+    # team:
+    team_id_map = tables["dimTeam"].set_index("name")["id"]
+    tables["factPlayerMatchStats"]["team_id"]  = tables["factPlayerMatchStats"]["team"].map(team_id_map)
+    tables["factMatchTimeline"]["team_id"]  = tables["factMatchTimeline"]["team"].map(team_id_map)
+    tables["dimMatch"]["home_team_id"] = tables["dimMatch"]["home_team"].map(team_id_map)
+    tables["dimMatch"]["away_team_id"] = tables["dimMatch"]["away_team"].map(team_id_map)
+    tables["dimVenue"]["home_team_id"] = tables["dimVenue"]["home_team"].map(team_id_map)
+
+    # ref:
+    referee_id_map = tables["dimReferee"].set_index("name")["id"]
+    tables["dimMatch"]["referee_id"]   = tables["dimMatch"]["referee"].map(referee_id_map)
+
     # drop old columns
-    match_ids_map = tables["dimMatch"].set_index("source_match_id")["match_id"]
-    for name in ("factPlayerMatchStats", "factMatchTimeline"):
-        tables[name]["match_id"] = tables[name]["source_match_id"].map(match_ids_map)
-        tables[name].drop(columns="source_match_id", inplace=True)
-    tables["dimMatch"].drop(columns="source_match_id", inplace=True)
+    tables["factPlayerMatchStats"].drop(columns=["team", "source_match_id"], inplace=True)
+    tables["factMatchTimeline"].drop(columns=["team", "source_match_id"], inplace=True)
+    tables["dimMatch"].drop(columns=["home_team", "away_team", "source_match_id", "referee"], inplace=True)
+    tables["dimVenue"].drop(columns="home_team", inplace=True)
 
     return tables
