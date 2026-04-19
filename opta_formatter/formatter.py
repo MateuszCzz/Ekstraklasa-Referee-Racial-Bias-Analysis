@@ -2,7 +2,6 @@ import pandas as pd
 
 DATA_START_DATE = "2024-01-01"
 DATA_END_DATE   = "2025-12-12"
-EVENT_TYPES: list[str] = [ "goal", "substitution", "yellow", "red", "second_yellow", "missed_penalty", "penalty_scored", "own_goal" ]
 STAT_COLS: list[str] = [
     "goals", "assists", "red_cards", "yellow_cards", "corners_won",
     "shots", "shots_on_target", "blocked_shots", "passes", "crosses",
@@ -27,9 +26,6 @@ def _parse_attendance(value: str) -> int|str:
     
 def build_dim_date() -> pd.DataFrame:
     return pd.DataFrame({"date": pd.date_range(DATA_START_DATE, DATA_END_DATE, freq="D")})
-
-def build_dim_event_type() -> pd.DataFrame:
-    return pd.DataFrame({"name": EVENT_TYPES})
 
 def build_dim_referee(matches: list[dict]) -> pd.DataFrame:
     refs = sorted({m["referee"] for m in matches})
@@ -138,7 +134,6 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
 
     tables = {
         "dimDate":              build_dim_date(),
-        "dimEventType":         build_dim_event_type(),
         "dimReferee":           build_dim_referee(matches),
         "dimVenue":             venue_df,
         "dimTeam":              build_dim_team(matches),
