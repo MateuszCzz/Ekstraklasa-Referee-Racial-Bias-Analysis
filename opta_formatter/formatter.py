@@ -23,7 +23,7 @@ def _parse_attendance(value: str) -> int|str:
     except (ValueError, AttributeError):
         print(f"Could not parse attendance: {value!r}, defaulting to empty string")
         return " "
-    
+
 def build_dim_date() -> pd.DataFrame:
     return pd.DataFrame({"date": pd.date_range(DATA_START_DATE, DATA_END_DATE, freq="D")})
 
@@ -126,8 +126,8 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     # results in 2 types of data problem:
     # - dublication by team ie. Mosór played for both Piast and Raków
     # - dublication due to source inconsistency R. Gikiewicz / Rafał Tadeusz Gikiewicz are the same person
-    # first is required to the lower chance of records being squashed due to players with same name playing in the league. Chance of 2 players with same name is high, chance of both of them playing for same team is relatively minimal
-    # chance of above happening is increased due to source using short for first names
+    # first is required to lower the chance of records being squashed due to players with same name playing in the league.
+    # Chance of 2 players with same name is high, chance of both playing for same team is relatively minimal.
     # both problems have to be solved in data enrichment stage later
     player_df = build_dim_player(matches)
     venue_df = build_dim_venue(matches)
