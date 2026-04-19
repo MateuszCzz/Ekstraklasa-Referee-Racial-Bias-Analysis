@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from driver import create_driver
-from storage import ensure_data_dir
+from storage import ensure_data_dir, load_csv
 from collector import enrich_player_data
 
 BASE_URL = "https://duckduckgo.com/?ia=web&q=%22transfermarkt.com%22"
@@ -41,6 +41,9 @@ def main() -> None:
 
     output_dir = args.data_out or RESULT_DIR
     ensure_data_dir(output_dir)
+
+    rows = load_csv(Path(args.data_in))
+    print(f"Loaded {len(rows)} rows from {args.data_in}")
 
     driver = create_driver(headless=args.headless)
     try:
