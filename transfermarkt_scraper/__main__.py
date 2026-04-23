@@ -42,9 +42,7 @@ def main() -> None:
     #arg test
     parser.add_argument(
         "--test",
-        type=bool,
-        default=False,
-        metavar="DIR",
+        action="store_true", 
         help="Limit operations to first 3 rows for a test run (default: {False})",
     )
     args = parser.parse_args()
