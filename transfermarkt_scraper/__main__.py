@@ -11,6 +11,7 @@ PLAYER_CSV_DIR = FORMATTER_INPUT_DIR / "dimPlayer.csv"
 # path to store results 
 DATA_DIR = Path("data/transfermarktscraper")
 RESULT_DIR = DATA_DIR / "result"
+PLAYER_URL_MAP = "players_url_map.csv"
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -53,6 +54,12 @@ def main() -> None:
 
     rows = load_csv(Path(args.data_in))
     print(f"Loaded {len(rows)} rows from {args.data_in}")
+
+    try:
+        url_map = load_csv(path= DATA_DIR / PLAYER_URL_MAP)
+        print(f"Loaded {len(url_map)} rows from {DATA_DIR / PLAYER_URL_MAP}")
+    except FileNotFoundError:
+        print(f"Player cashed url file not found at {DATA_DIR / PLAYER_URL_MAP}, skipping.")
 
     driver = create_driver(headless=args.headless)
     try:
