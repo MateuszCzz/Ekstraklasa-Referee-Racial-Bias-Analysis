@@ -52,18 +52,25 @@ def main() -> None:
     output_dir = args.data_out or RESULT_DIR
     ensure_data_dir(output_dir)
 
-    rows = load_csv(Path(args.data_in))
-    print(f"Loaded {len(rows)} rows from {args.data_in}")
+    players = load_csv(Path(args.data_in))
+    print(f"Loaded {len(players)} rows from {args.data_in}")
 
     try:
-        url_map = load_csv(path= DATA_DIR / PLAYER_URL_MAP)
-        print(f"Loaded {len(url_map)} rows from {DATA_DIR / PLAYER_URL_MAP}")
+        players_url_cached = load_csv(path= DATA_DIR / PLAYER_URL_MAP)
+        print(f"Loaded {len(players_url_cached)} rows from {DATA_DIR / PLAYER_URL_MAP}")
     except FileNotFoundError:
-        print(f"Player cashed url file not found at {DATA_DIR / PLAYER_URL_MAP}, skipping.")
+        print(f"Player cached url file not found at {DATA_DIR / PLAYER_URL_MAP}, skipping.")
 
     driver = create_driver(headless=args.headless)
     try:
-        enrich_player_data(driver, BASE_URL)
+            enriched = enrich_player_data(
+                 driver, 
+                 BASE_URL, 
+                 test_mode = args.test, 
+                 players = players, 
+                 url_cached=players_url_cached 
+                 )
+
     finally:
         driver.quit()
 
