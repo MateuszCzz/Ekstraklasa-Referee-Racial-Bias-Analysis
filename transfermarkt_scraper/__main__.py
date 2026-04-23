@@ -54,7 +54,8 @@ def main() -> None:
 
     players = load_csv(Path(args.data_in))
     print(f"Loaded {len(players)} rows from {args.data_in}")
-
+    
+    players_url_cached: list[dict] | None = None  
     try:
         players_url_cached = load_csv(path= DATA_DIR / PLAYER_URL_MAP)
         print(f"Loaded {len(players_url_cached)} rows from {DATA_DIR / PLAYER_URL_MAP}")
