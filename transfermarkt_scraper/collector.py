@@ -52,8 +52,11 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
         time.sleep(PAGE_LOAD_WAIT)
         if not (player_tm_id := parse_search_results(driver)):
             print(f"[query error] No transfermarkt id found for {player_search_query}")
-            continue
-        print(player_tm_id)
+            user_input = input(f"  Enter transfermarkt ID for '{player_name}' ({player_team}), or skip: \n").strip()
+            if not user_input:
+                print(f"  [SKIP] Skipping {player_name}")
+                continue
+            player_tm_id = user_input
 
         # check if duplicate player
         player_is_duplicate = player_tm_id in done_tm_id_map
