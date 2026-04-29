@@ -4,7 +4,7 @@ from driver import create_driver
 from storage import ensure_data_dir, load_csv
 from collector import enrich_player_data
 
-BASE_URL = "https://duckduckgo.com/?ia=web&q=%22transfermarkt.com%22"
+BASE_URL = "https://duckduckgo.com/?q=site%3Atransfermarkt.com"
 # path to results from previous segment
 FORMATTER_INPUT_DIR = Path("data/optaformatter/result") 
 PLAYER_CSV_DIR = FORMATTER_INPUT_DIR / "dimPlayer.csv"
