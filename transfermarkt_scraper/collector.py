@@ -4,10 +4,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from parser import parse_search_results
-from storage import load_csv
+from storage import load_csv, save_csv
 
 PAGE_LOAD_WAIT  = 2.0   # after initial page load
 CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
+
+PARTIAL_FIELDNAMES = ["id", "tm_id", "name", "team"]
 
 def build_search_url(url: str, player_name: str, player_team: str) -> str:
     query = f"{player_name} {player_team}"
@@ -24,9 +26,12 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
     # check if cached results exist
     if partial_result_path.exists():
         result = load_csv(partial_result_path)
+        # map to skip done players
+        done_id_map = {row["id"] for row in result}  
         print(f"Loaded {len(result)} cached players from {partial_result_path}")
     else:
         result = []
+        done_id_map = set()
         print(f"Player cached file not found at {partial_result_path}, skipping.")
         
     # iter over players
@@ -35,7 +40,10 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
         player_name = player["name"]
         player_team = player["team"]
 
-        print(f"\n[{i+1}/{len(players)}] id={player_id}  {player_name}  |  {player_team}")
+        # skip if already done
+        if player_id in done_id_map:
+            print(f"[SKIP] [{i+1}/{len(players)}] id={player_id}  {player_name}  |  {player_team}")
+            continue
 
         # build url
         player_search_query = build_search_url(url, player_name, player_team)
@@ -50,6 +58,15 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
         print(player_tm_id)
         # 2. check url map
         # A3. pass page to parser
-        # A4. save in cache
-        # 5. save partial
+
+        row = {
+            "id":           player_id,
+            "tm_id":        player_tm_id,
+            "name":         player_name,
+            "team":         player_team,
+        }
+        # save to cache
+        done_id_map.add(player_id)
+        save_csv(partial_result_path, [row], PARTIAL_FIELDNAMES,"a")
+        print(f"[DONE] [{i+1}/{len(players)}] id={player_id}  {player_name}  |  {player_team}")
     return result
