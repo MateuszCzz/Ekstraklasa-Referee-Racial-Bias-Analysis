@@ -1,15 +1,12 @@
 import time
 from pathlib import Path
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from parser import parse_search_results
 from storage import load_csv, save_csv
 
 PAGE_LOAD_WAIT  = 2.0   # after initial page load
 CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
 
-PARTIAL_FIELDNAMES = ["id", "tm_id", "name", "team"]
+PARTIAL_FIELDNAMES = ["id", "tm_id", "name", "team", "is_duplicate"]
 
 def build_search_url(url: str, player_name: str, player_team: str) -> str:
     query = f"{player_name} {player_team}"
@@ -25,13 +22,15 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
 
     # check if cached results exist
     if partial_result_path.exists():
-        result = load_csv(partial_result_path)
-        # map to skip done players
-        done_id_map = {row["id"] for row in result}  
+        # filter out duplicated players from final result
+        result = [row for row in load_csv(partial_result_path) if row["is_duplicate"] != "True"]
+        done_id_map = {row["id"] for row in result} # map to skip done players  
+        done_tm_id_map = {row["tm_id"] for row in result} # map to skip duplicated players
         print(f"Loaded {len(result)} cached players from {partial_result_path}")
     else:
         result = []
         done_id_map = set()
+        done_tm_id_map = set()
         print(f"Player cached file not found at {partial_result_path}, skipping.")
         
     # iter over players
@@ -51,22 +50,28 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
         # search for player in duckduckgo
         driver.get(player_search_query)
         time.sleep(PAGE_LOAD_WAIT)
-
         if not (player_tm_id := parse_search_results(driver)):
-            print(f"[query error] No transfermarkt id found for  {player_search_query}")
+            print(f"[query error] No transfermarkt id found for {player_search_query}")
             continue
         print(player_tm_id)
-        # 2. check url map
-        # A3. pass page to parser
 
+        # check if duplicate player
+        player_is_duplicate = player_tm_id in done_tm_id_map
+
+        # A3. pass page to parser
         row = {
             "id":           player_id,
             "tm_id":        player_tm_id,
             "name":         player_name,
             "team":         player_team,
+            "is_duplicate": player_is_duplicate,
         }
+
+        if not player_is_duplicate:
+            result.append(row) 
+            done_tm_id_map.add(player_tm_id)
+
         # save to cache
-        done_id_map.add(player_id)
         save_csv(partial_result_path, [row], PARTIAL_FIELDNAMES,"a")
-        print(f"[DONE] [{i+1}/{len(players)}] id={player_id}  {player_name}  |  {player_team}")
+        print(f"[DONE] [{i+1}/{len(players)}] id={player_id}  {player_name}  |  {player_team} | dup:{player_is_duplicate}")
     return result
