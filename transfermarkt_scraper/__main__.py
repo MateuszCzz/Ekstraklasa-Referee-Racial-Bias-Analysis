@@ -12,8 +12,7 @@ PLAYER_CSV_DIR = FORMATTER_INPUT_DIR / "dimPlayer.csv"
 
 # path to store results 
 DATA_DIR = Path("data/transfermarktscraper")
-RESULT_DIR = DATA_DIR / "result"
-PLAYER_URL_MAP = DATA_DIR / "players_id_map.csv"
+PARTIAL_RESULT_DIR = DATA_DIR / "partial_results.csv"
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -36,9 +35,9 @@ def main() -> None:
     parser.add_argument(
         "--data-out",
         type=Path,
-        default=RESULT_DIR,
+        default=DATA_DIR,
         metavar="DIR",
-        help="Where to write results to (default: {RESULT_DIR})",
+        help="Where to write results to (default: {DATA_DIR})",
     )
 
     #arg test
@@ -49,7 +48,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    output_dir = args.data_out or RESULT_DIR
+    output_dir = args.data_out or DATA_DIR
     ensure_data_dir(output_dir)
 
     players = load_csv(Path(args.data_in))
@@ -57,7 +56,7 @@ def main() -> None:
 
     driver = create_driver(headless=args.headless)
     try:
-            enriched = enrich_player_data(driver, BASE_URL, args.test, players, PLAYER_URL_MAP)
+            enriched = enrich_player_data(driver, BASE_URL, args.test, players, PARTIAL_RESULT_DIR)
 
     finally:
         driver.quit()

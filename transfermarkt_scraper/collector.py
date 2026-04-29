@@ -14,9 +14,7 @@ def build_search_url(url: str, player_name: str, player_team: str) -> str:
     query = query.replace(".", "").replace(" ", "+")
     return f"{url}+{query}+&ia=web"
 
-def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], url_map_path: Path) -> list[dict]:
-    result: list[dict] = []
-
+def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], partial_result_path: Path) -> list[dict]:
     # if its only a test run limit to 3 rows
     if test_mode:
         total = len(players)
@@ -24,12 +22,12 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], ur
         print(f"[TEST MODE] Running on {len(players)} of {total} players")
 
     # check if cached results exist
-    if url_map_path.exists():
-        url_map = {row["id"]: row for row in load_csv(url_map_path)}
-        print(f"Loaded {len(url_map)} cached players from {url_map_path}")
+    if partial_result_path.exists():
+        result = load_csv(partial_result_path)
+        print(f"Loaded {len(result)} cached players from {partial_result_path}")
     else:
-        url_map = []
-        print(f"Player cached url file not found at {url_map_path}, skipping.")
+        result = []
+        print(f"Player cached file not found at {partial_result_path}, skipping.")
         
     # iter over players
     for i, player in enumerate(players):
