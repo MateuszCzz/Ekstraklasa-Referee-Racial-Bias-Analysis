@@ -1,8 +1,10 @@
 import time
+from pathlib import Path
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from parser import parse_search_results
+from storage import load_csv
 
 PAGE_LOAD_WAIT  = 2.0   # after initial page load
 CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
@@ -12,7 +14,7 @@ def build_search_url(url: str, player_name: str, player_team: str) -> str:
     query = query.replace(".", "").replace(" ", "+")
     return f"{url}+{query}+&ia=web"
 
-def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], url_cached: list[dict] | None,) -> list[dict]:
+def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], url_map_path: Path) -> list[dict]:
     result: list[dict] = []
 
     # if its only a test run limit to 3 rows
@@ -21,6 +23,14 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], ur
         players = players[:3]
         print(f"[TEST MODE] Running on {len(players)} of {total} players")
 
+    # check if cached results exist
+    if url_map_path.exists():
+        url_map = {row["id"]: row for row in load_csv(url_map_path)}
+        print(f"Loaded {len(url_map)} cached players from {url_map_path}")
+    else:
+        url_map = []
+        print(f"Player cached url file not found at {url_map_path}, skipping.")
+        
     # iter over players
     for i, player in enumerate(players):
         player_id = player["id"]

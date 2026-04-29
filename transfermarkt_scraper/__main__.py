@@ -5,13 +5,15 @@ from storage import ensure_data_dir, load_csv
 from collector import enrich_player_data
 
 BASE_URL = "https://duckduckgo.com/?q=site%3Atransfermarkt.com"
+
 # path to results from previous segment
 FORMATTER_INPUT_DIR = Path("data/optaformatter/result") 
 PLAYER_CSV_DIR = FORMATTER_INPUT_DIR / "dimPlayer.csv"
+
 # path to store results 
 DATA_DIR = Path("data/transfermarktscraper")
 RESULT_DIR = DATA_DIR / "result"
-PLAYER_URL_MAP = "players_url_map.csv"
+PLAYER_URL_MAP = DATA_DIR / "players_id_map.csv"
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -52,23 +54,10 @@ def main() -> None:
 
     players = load_csv(Path(args.data_in))
     print(f"Loaded {len(players)} rows from {args.data_in}")
-    
-    players_url_cached: list[dict] | None = None  
-    try:
-        players_url_cached = load_csv(path= DATA_DIR / PLAYER_URL_MAP)
-        print(f"Loaded {len(players_url_cached)} rows from {DATA_DIR / PLAYER_URL_MAP}")
-    except FileNotFoundError:
-        print(f"Player cached url file not found at {DATA_DIR / PLAYER_URL_MAP}, skipping.")
 
     driver = create_driver(headless=args.headless)
     try:
-            enriched = enrich_player_data(
-                 driver, 
-                 BASE_URL, 
-                 test_mode = args.test, 
-                 players = players, 
-                 url_cached=players_url_cached 
-                 )
+            enriched = enrich_player_data(driver, BASE_URL, args.test, players, PLAYER_URL_MAP)
 
     finally:
         driver.quit()
