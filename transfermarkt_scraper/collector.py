@@ -6,7 +6,7 @@ from storage import load_csv, save_csv
 PAGE_LOAD_WAIT  = 2.0   # after initial page load
 CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
 
-PARTIAL_FIELDNAMES = ["id", "tm_id", "name", "team", "is_duplicate"]
+PARTIAL_FIELDNAMES = ["id", "tm_id", "tm_string", "name", "team", "is_duplicate"]
 
 def build_search_url(url: str, player_name: str, player_team: str) -> str:
     query = f"{player_name} {player_team}"
@@ -50,13 +50,25 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
         # search for player in duckduckgo
         driver.get(player_search_query)
         time.sleep(PAGE_LOAD_WAIT)
-        if not (player_tm_id := parse_search_results(driver)):
+
+        # parse out both id and name string
+        player_tm_id, player_tm_string = parse_search_results(driver)
+
+        # ask user for id if its missing
+        if not player_tm_id:
             print(f"[query error] No transfermarkt id found for {player_search_query}")
-            user_input = input(f"  Enter transfermarkt ID for '{player_name}' ({player_team}), or skip: \n").strip()
-            if not user_input:
+            player_tm_id = input(f"  Enter transfermarkt ID for '{player_name}' ({player_team}), or skip: \n").strip()
+            if not player_tm_id:
                 print(f"  [SKIP] Skipping {player_name}")
                 continue
-            player_tm_id = user_input
+
+        # ask user for name string if its missing
+        if not player_tm_string:
+            print(f"[query error] No transfermarkt name string found for {player_search_query}")
+            player_tm_string = input(f"  Enter transfermarkt name for '{player_name}' (e.g. 'lionel-messi'), or skip: \n").strip()
+            if not player_tm_string:
+                print(f"  [SKIP] Skipping {player_name}")
+                continue
 
         # check if duplicate player
         player_is_duplicate = player_tm_id in done_tm_id_map
@@ -65,6 +77,7 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
         row = {
             "id":           player_id,
             "tm_id":        player_tm_id,
+            "tm_string":    player_tm_string,
             "name":         player_name,
             "team":         player_team,
             "is_duplicate": player_is_duplicate,
