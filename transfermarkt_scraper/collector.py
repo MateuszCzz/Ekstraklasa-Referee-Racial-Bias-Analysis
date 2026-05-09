@@ -8,8 +8,8 @@ CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
 
 PARTIAL_FIELDNAMES = ["id", "tm_id", "tm_string", "name", "team", "is_duplicate"]
 
-def build_search_url(url: str, player_name: str, player_team: str) -> str:
-    query = f"{player_name} {player_team}"
+def _build_search_url(url: str, player_name: str, player_team: str) -> str:
+    query = f"{player_name} {player_team} profil"
     query = query.replace(".", "").replace(" ", "+")
     return f"{url}+{query}+&ia=web"
 
@@ -45,7 +45,7 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
             continue
 
         # build url
-        player_search_query = build_search_url(url, player_name, player_team)
+        player_search_query = _build_search_url(url, player_name, player_team)
 
         # search for player in duckduckgo
         driver.get(player_search_query)
