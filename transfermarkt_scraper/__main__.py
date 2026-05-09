@@ -44,7 +44,7 @@ def main() -> None:
     parser.add_argument(
         "--test",
         action="store_true", 
-        help="Limit operations to first 3 rows for a test run (default: {False})",
+        help="Limit operations to first 3 rows for a test run (default: False)",
     )
     args = parser.parse_args()
 
