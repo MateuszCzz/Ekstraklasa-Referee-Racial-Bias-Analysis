@@ -1,6 +1,6 @@
 import time
 from pathlib import Path
-from parser import parse_search_results
+from parser import parse_search_results, parse_player_page
 from storage import load_csv, save_csv
 
 PAGE_LOAD_WAIT  = 2.0   # after initial page load
@@ -12,6 +12,9 @@ def _build_search_url(url: str, player_name: str, player_team: str) -> str:
     query = f"{player_name} {player_team} profil"
     query = query.replace(".", "").replace(" ", "+")
     return f"{url}+{query}+&ia=web"
+
+def _build_player_url(tm_string: str, tm_id: str) -> str:
+    return f"https://www.transfermarkt.com/{tm_string}/profil/spieler/{tm_id}"
 
 def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], partial_result_path: Path) -> list[dict]:
     # if its only a test run limit to 3 rows
@@ -70,10 +73,10 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
                 print(f"  [SKIP] Skipping {player_name}")
                 continue
 
-        # check if duplicate player
+        # check if given name corresponds to already calculated transfermarkt 
         player_is_duplicate = player_tm_id in done_tm_id_map
 
-        # A3. pass page to parser
+        # prep data output
         row = {
             "id":           player_id,
             "tm_id":        player_tm_id,
@@ -83,8 +86,17 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
             "is_duplicate": player_is_duplicate,
         }
 
+        # if not already scraped
         if not player_is_duplicate:
-            result.append(row) 
+            # prep right transfermarkt url
+            driver.get(_build_player_url(player_tm_string, player_tm_id))
+            time.sleep(PAGE_LOAD_WAIT)
+
+            # scrap transfermarkt for new data and update
+            row.update(parse_player_page(driver))
+            
+            # append to final results
+            result.append(row)
             done_tm_id_map.add(player_tm_id)
 
         # save to cache

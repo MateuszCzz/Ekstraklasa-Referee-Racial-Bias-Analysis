@@ -7,6 +7,12 @@ QUERY_RESULT_CSS = "li[data-layout='organic'] h2 a"
 
 ELEMENT_LOAD_WAIT = 10 # delay for elements to become visible
 
+def parse_player_page(driver) -> dict:
+    """Gets player data from given transfermarkt page."""
+    data: dict = {}
+
+    return data
+
 def parse_search_results(driver) -> tuple[str, str]:
     """Gets player transfermarkt id and name from first matching search results."""
     try:
