@@ -263,8 +263,13 @@ def parse_search_results(driver) -> tuple[str, str]:
             parts = href.rstrip("/").split("/")
             # get number from the end
             tm_id = parts[-1]
-            # get string before profil "lionel-messi/profil/spieler/28003"
-            # validate by checking for "-"
-            tm_string = parts[-4] if "-" in parts[-4] else ""
-            return tm_id, tm_string
+            tm_string = parts[-4]
+
+            # get string with dash before profil "lionel-messi/profil"
+            if "-" in tm_string:
+                return tm_id, tm_string
+            
+            # if single word check for profil at next position
+            if parts[-3] == "profil":
+                return tm_id, tm_string
     return "", ""
