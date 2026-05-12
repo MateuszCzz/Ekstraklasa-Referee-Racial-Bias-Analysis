@@ -195,6 +195,12 @@ def _parse_image(driver) -> tuple[str, float]:
         linear = np.where(pixels_f <= 0.04045, pixels_f / 12.92, ((pixels_f + 0.055) / 1.055) ** 2.4)
         Y = np.median(linear @ [0.2126, 0.7152, 0.0722])
         L = 116 * (Y ** (1/3)) - 16 if Y > 0.008856 else 903.3 * Y
+
+        # handle placeholder, almost white image
+        if L > 95:
+            print(f" [parser] Image transfermarkt returned placeholder (L={L}), skipping")
+            return "", 0
+        
         return skin_hex, round(L, 2)
     
     except Exception as e:
@@ -232,10 +238,12 @@ def parse_player_page(driver) -> dict:
     # get player image/skin color
     data["skin_hex"], skin_lightness  = _parse_image(driver)
 
-    # map lightness to human info
-    data["skin_color_group"], data["is_poc"] = _fitzpatrick_from_lightness(skin_lightness)
-    data["skin_lightness"] = str(skin_lightness)
-
+    if data["skin_hex"]:
+        # map lightness to human info
+        data["skin_color_group"], data["is_poc"] = _fitzpatrick_from_lightness(skin_lightness)
+    else:
+        # handle image placeholder
+        data["skin_color_group"], data["is_poc"], data["skin_lightness"] = "", "", ""
     return data
 
 def parse_search_results(driver) -> tuple[str, str]:
