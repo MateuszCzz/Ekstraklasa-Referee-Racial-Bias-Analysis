@@ -124,7 +124,7 @@ def _parse_foot(driver) -> str:
         )
         return el.text.strip()
     except Exception as e:
-        print(f" [parser] Failed to parse preferred foot: {e}")
+        print(f" [parser] Failed to find a preferred foot for the player (safe to ignore)")
         return ""
     
 def _parse_position(driver) -> tuple[str, str]:
