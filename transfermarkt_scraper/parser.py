@@ -8,6 +8,7 @@ QUERY_RESULT_CSS = "li[data-layout='organic'] h2 a"
 COOKIES_ACCEPT_BUTTON_CSS = ".accept-all"
 CONSENT_IFRAME_CSS = "iframe[id^='sp_message_iframe']"
 PLAYER_NAME_CSS = "h1.data-header__headline-wrapper"
+BIRTH_DATE_CSS = "span[itemprop='birthDate']"
 
 ELEMENT_LOAD_WAIT = 10 # delay for elements to become visible
 SCROLL_PAUSE   = 2.0 # delay after scrolling
@@ -60,6 +61,21 @@ def _parse_name(driver) -> str:
         print(f" [parser] Failed to parse player full name: {e}")
         return ""
     
+def _parse_birth_date(driver) -> tuple[str, str]:
+    """Returns tuplet (date_of_birth, age) ('03/01/2006', '20')"""
+    try:
+        el = WebDriverWait(driver, ELEMENT_LOAD_WAIT).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, BIRTH_DATE_CSS))
+        )
+        # split string into 2 groups, x/x/x and (x)
+        date = re.match(r"(\d{2}/\d{2}/\d{4})\s*\((\d+)\)", el.text.strip())
+        if date is None:
+            raise ValueError(f" [parser] Failed to parse birth date from: '{el.text.strip()}'")
+        return date.group(1), date.group(2)
+    except Exception as e:
+        print(f" [parser] Failed to parse player full name: {e}")
+        return "", ""
+
 def parse_player_page(driver) -> dict:
     """Gets player data from given transfermarkt page."""
     data: dict = {}
@@ -72,6 +88,10 @@ def parse_player_page(driver) -> dict:
 
     # get full name
     data["full_name"] = _parse_name(driver)
+
+    # get birth date and age
+    data["date_of_birth"], data["age"] = _parse_birth_date(driver)
+
 
     return data
 
