@@ -137,7 +137,7 @@ def _parse_position(driver) -> tuple[str, str]:
         if len(parts) == 2:
             return parts[0], parts[1]
         else:
-            raise ValueError(f" [parser] Failed to parse birth date from: {el.text.strip()}")
+            raise ValueError(f" [parser] Failed to parse position from: {el.text.strip()}")
 
     except Exception as e:
         print(f" [parser] Failed to parse position: {e}")
