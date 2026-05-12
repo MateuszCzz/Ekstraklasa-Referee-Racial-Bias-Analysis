@@ -12,6 +12,7 @@ BIRTH_DATE_CSS = "span[itemprop='birthDate']"
 NATIONALITY_CSS = "span[itemprop='nationality']"
 HEIGHT_CSS = "span[itemprop='height']"
 PREFERRED_FOOT_TABLE_CSS = "//span[contains(@class,'info-table__content--regular') and contains(text(),'Foot:')]/following-sibling::span[contains(@class,'info-table__content--bold')]"
+POSITION_TABLE_CSS = "//span[contains(@class,'info-table__content--regular') and contains(text(),'Position:')]/following-sibling::span[contains(@class,'info-table__content--bold')]"
 
 ELEMENT_LOAD_WAIT = 10 # delay for elements to become visible
 SCROLL_PAUSE   = 2.0 # delay after scrolling
@@ -111,6 +112,22 @@ def _parse_foot(driver) -> str:
         print(f" [parser] Failed to parse preferred foot: {e}")
         return ""
     
+def _parse_position(driver) -> tuple[str, str]:
+    """Returns (position_group, main_position) e.g. ('Midfield', 'Defensive Midfield')"""
+    try:
+        el = WebDriverWait(driver, ELEMENT_LOAD_WAIT).until(
+            EC.presence_of_element_located((By.XPATH, POSITION_TABLE_CSS))
+        )
+        parts = [p.strip() for p in el.text.split("-", 1)]
+        if len(parts) == 2:
+            return parts[0], parts[1]
+        else:
+            raise ValueError(f" [parser] Failed to parse birth date from: {el.text.strip()}")
+
+    except Exception as e:
+        print(f" [parser] Failed to parse position: {e}")
+        return "", ""
+    
 def parse_player_page(driver) -> dict:
     """Gets player data from given transfermarkt page."""
     data: dict = {}
@@ -135,6 +152,9 @@ def parse_player_page(driver) -> dict:
 
     # get foot
     data["preferred_foot"] = _parse_foot(driver)
+
+    # get position 
+    data["position_group"], data["position"] = _parse_position(driver)
 
     return data
 
