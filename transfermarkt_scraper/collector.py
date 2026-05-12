@@ -26,8 +26,9 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
     # check if cached results exist
     if partial_result_path.exists():
         # filter out duplicated players from final result
-        result = [row for row in load_csv(partial_result_path) if row["is_duplicate"] != "True"]
-        done_id_map = {row["id"] for row in result} # map to skip done players  
+        all_cached = load_csv(partial_result_path)
+        result = [row for row in all_cached if row["is_duplicate"] != "True"]
+        done_id_map = {row["id"] for row in all_cached}
         done_tm_id_map = {row["tm_id"] for row in result} # map to skip duplicated players
         print(f"Loaded {len(result)} cached players from {partial_result_path}")
     else:
