@@ -9,7 +9,8 @@ COOKIES_ACCEPT_BUTTON_CSS = ".accept-all"
 CONSENT_IFRAME_CSS = "iframe[id^='sp_message_iframe']"
 PLAYER_NAME_CSS = "h1.data-header__headline-wrapper"
 BIRTH_DATE_CSS = "span[itemprop='birthDate']"
-NATIONALITY_CSS     = "span[itemprop='nationality']"
+NATIONALITY_CSS = "span[itemprop='nationality']"
+HEIGHT_CSS = "span[itemprop='height']"
 
 ELEMENT_LOAD_WAIT = 10 # delay for elements to become visible
 SCROLL_PAUSE   = 2.0 # delay after scrolling
@@ -87,6 +88,18 @@ def _parse_nationality(driver) -> str:
         print(f" [parser] Failed to parse player nationality: {e}")
         return ""
     
+def _parse_height(driver) -> str:
+    try:
+        el = WebDriverWait(driver, ELEMENT_LOAD_WAIT).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, HEIGHT_CSS))
+        )
+        # strip unit and dots
+        height_str = re.sub(r"[,. m]", "", el.text).strip()
+        return height_str
+    except Exception as e:
+        print(f" [parser] Failed to parse player height: {e}")
+        return ""
+
 def parse_player_page(driver) -> dict:
     """Gets player data from given transfermarkt page."""
     data: dict = {}
@@ -105,6 +118,9 @@ def parse_player_page(driver) -> dict:
 
     # get nationality
     data["nationality"] = _parse_nationality(driver)
+
+    # get height
+    data["height"] = _parse_height(driver)
 
     return data
 
