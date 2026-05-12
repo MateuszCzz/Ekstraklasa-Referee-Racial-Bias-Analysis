@@ -136,6 +136,8 @@ def _parse_position(driver) -> tuple[str, str]:
         parts = [p.strip() for p in el.text.split("-", 1)]
         if len(parts) == 2:
             return parts[0], parts[1]
+        elif parts[0] == "Goalkeeper":
+            return "Goalkeeper", "Goalkeeper"
         else:
             raise ValueError(f" [parser] Failed to parse position from: {el.text.strip()}")
 
