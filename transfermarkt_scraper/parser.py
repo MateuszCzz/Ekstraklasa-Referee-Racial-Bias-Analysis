@@ -241,6 +241,7 @@ def parse_player_page(driver) -> dict:
     if data["skin_hex"]:
         # map lightness to human info
         data["skin_color_group"], data["is_poc"] = _fitzpatrick_from_lightness(skin_lightness)
+        data["skin_lightness"] = str(skin_lightness)
     else:
         # handle image placeholder
         data["skin_color_group"], data["is_poc"], data["skin_lightness"] = "", "", ""
