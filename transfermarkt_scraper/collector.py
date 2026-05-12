@@ -107,9 +107,14 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
             # scrap transfermarkt for new data and update
             row.update(parse_player_page(driver))
             
-            # append to final results
-            result.append(row)
-            done_tm_id_map.add(player_tm_id)
+            # validate output on critical fields
+            if row["full_name"] or row["age"] or row["nationality"] or row["position"]:
+                # append to final results
+                result.append(row)
+                done_tm_id_map.add(player_tm_id)
+            else:
+                print(f" [collector] Player lacking one of the critical fields skiping.")
+                continue
 
         # save to cache
         save_csv(partial_result_path, [row], PARTIAL_FIELDNAMES,"a")
