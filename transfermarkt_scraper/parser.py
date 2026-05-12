@@ -8,6 +8,7 @@ COOKIES_ACCEPT_BUTTON_CSS = ".accept-all"
 CONSENT_IFRAME_CSS = "iframe[id^='sp_message_iframe']"
 
 ELEMENT_LOAD_WAIT = 10 # delay for elements to become visible
+SCROLL_PAUSE   = 2.0 # delay after scrolling
 
 def _dismiss_cookie_prompt(driver) -> None:
     # # cookies already cleared once
@@ -36,12 +37,24 @@ def _dismiss_cookie_prompt(driver) -> None:
         # switch back
         driver.switch_to.default_content()  
 
+def _scroll_and_wait(driver) -> None:
+    """Press key to trigger dynamic rendering"""
+    from selenium.webdriver.common.keys import Keys
+    body = driver.find_element(By.TAG_NAME, "body")
+    body.send_keys(Keys.END)
+    time.sleep(SCROLL_PAUSE)
+    body.send_keys(Keys.HOME)
+    time.sleep(SCROLL_PAUSE)
+
 def parse_player_page(driver) -> dict:
     """Gets player data from given transfermarkt page."""
     data: dict = {}
 
     # dismiss cookies prompt
     _dismiss_cookie_prompt(driver)
+
+    # scroll up down to force dynamic rendering
+    _scroll_and_wait(driver)
 
     return data
 
