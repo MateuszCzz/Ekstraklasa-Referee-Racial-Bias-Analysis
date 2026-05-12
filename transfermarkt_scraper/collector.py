@@ -6,7 +6,7 @@ from storage import load_csv, save_csv
 PAGE_LOAD_WAIT  = 2.0   # after initial page load
 CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
 
-PARTIAL_FIELDNAMES = ["id", "tm_id", "tm_string", "name", "team", "is_duplicate", "full_name", "date_of_birth", "age", "nationality", "height"]
+PARTIAL_FIELDNAMES = ["id", "tm_id", "tm_string", "name", "team", "is_duplicate", "full_name", "date_of_birth", "age", "nationality", "height", "preferred_foot"]
 
 def _build_search_url(url: str, player_name: str, player_team: str) -> str:
     query = f"{player_name} {player_team} profil"
@@ -78,17 +78,18 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
 
         # prep data output
         row = {
-            "id":           player_id,
-            "tm_id":        player_tm_id,
-            "tm_string":    player_tm_string,
-            "name":         player_name,
-            "team":         player_team,
-            "is_duplicate": player_is_duplicate,
-            "full_name":    "",
-            "age":          "",
-            "date_of_birth":"",
-            "nationality":  "",
-            "height":       "",
+            "id":               player_id,
+            "tm_id":            player_tm_id,
+            "tm_string":        player_tm_string,
+            "name":             player_name,
+            "team":             player_team,
+            "is_duplicate":     player_is_duplicate,
+            "full_name":        "",
+            "age":              "",
+            "date_of_birth":    "",
+            "nationality":      "",
+            "height":           "",
+            "preferred_foot":   "",
         }
 
         # if not already scraped

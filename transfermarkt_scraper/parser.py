@@ -11,6 +11,7 @@ PLAYER_NAME_CSS = "h1.data-header__headline-wrapper"
 BIRTH_DATE_CSS = "span[itemprop='birthDate']"
 NATIONALITY_CSS = "span[itemprop='nationality']"
 HEIGHT_CSS = "span[itemprop='height']"
+PREFERRED_FOOT_TABLE_CSS = "//span[contains(@class,'info-table__content--regular') and contains(text(),'Foot:')]/following-sibling::span[contains(@class,'info-table__content--bold')]"
 
 ELEMENT_LOAD_WAIT = 10 # delay for elements to become visible
 SCROLL_PAUSE   = 2.0 # delay after scrolling
@@ -99,7 +100,17 @@ def _parse_height(driver) -> str:
     except Exception as e:
         print(f" [parser] Failed to parse player height: {e}")
         return ""
-
+    
+def _parse_foot(driver) -> str:
+    try:
+        el = WebDriverWait(driver, ELEMENT_LOAD_WAIT).until(
+            EC.presence_of_element_located((By.XPATH, PREFERRED_FOOT_TABLE_CSS))
+        )
+        return el.text.strip()
+    except Exception as e:
+        print(f" [parser] Failed to parse preferred foot: {e}")
+        return ""
+    
 def parse_player_page(driver) -> dict:
     """Gets player data from given transfermarkt page."""
     data: dict = {}
@@ -121,6 +132,9 @@ def parse_player_page(driver) -> dict:
 
     # get height
     data["height"] = _parse_height(driver)
+
+    # get foot
+    data["preferred_foot"] = _parse_foot(driver)
 
     return data
 
