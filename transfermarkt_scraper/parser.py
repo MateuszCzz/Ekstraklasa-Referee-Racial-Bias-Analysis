@@ -1,8 +1,10 @@
-import re
+import time, re, requests, io
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from PIL import Image
+import numpy as np
 
 QUERY_RESULT_CSS = "li[data-layout='organic'] h2 a"
 COOKIES_ACCEPT_BUTTON_CSS = ".accept-all"
@@ -13,9 +15,13 @@ NATIONALITY_CSS = "span[itemprop='nationality']"
 HEIGHT_CSS = "span[itemprop='height']"
 PREFERRED_FOOT_TABLE_CSS = "//span[contains(@class,'info-table__content--regular') and contains(text(),'Foot:')]/following-sibling::span[contains(@class,'info-table__content--bold')]"
 POSITION_TABLE_CSS = "//span[contains(@class,'info-table__content--regular') and contains(text(),'Position:')]/following-sibling::span[contains(@class,'info-table__content--bold')]"
+PLAYER_IMAGE_CSS = "img.data-header__profile-image"
 
 ELEMENT_LOAD_WAIT = 10 # delay for elements to become visible
 SCROLL_PAUSE   = 2.0 # delay after scrolling
+
+CROP_TOP_FRAC = 0.40   # skip this fraction from the top
+CROP_SIDE_FRAC = 0.20   # skip this fraction from each side
 
 def _dismiss_cookie_prompt(driver) -> None:
     # # cookies already cleared once
@@ -52,6 +58,15 @@ def _scroll_and_wait(driver) -> None:
     time.sleep(SCROLL_PAUSE)
     body.send_keys(Keys.HOME)
     time.sleep(SCROLL_PAUSE)
+
+def _fitzpatrick_from_lightness(L: float) -> tuple[str, bool]:
+    """Maps CIE L* to Fitzpatrick skin type label and POC flag"""
+    if   L >= 70: return "Very light",  False
+    elif L >= 60: return "Light",       False
+    elif L >= 50: return "Medium light",False
+    elif L >= 41: return "Medium",      True
+    elif L >= 30: return "Medium dark", True
+    else:         return "Dark",        True
 
 def _parse_name(driver) -> str:
     try:
@@ -127,6 +142,62 @@ def _parse_position(driver) -> tuple[str, str]:
     except Exception as e:
         print(f" [parser] Failed to parse position: {e}")
         return "", ""
+
+def _parse_image(driver) -> tuple[str, float]:
+    """Extracts dominant skin hex and HSV lightness"""
+    try:
+        el = WebDriverWait(driver, ELEMENT_LOAD_WAIT).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, PLAYER_IMAGE_CSS))
+        )
+        
+        # get image src
+        src = el.get_attribute("src") or ""
+        if not src:
+            raise ValueError(f"[parser] Failed to parse image source from: {el.get_attribute('src')}")
+        
+        # prepare headers for request
+        cookies = {c["name"]: c["value"] for c in driver.get_cookies()}
+        headers = {"User-Agent": driver.execute_script("return navigator.userAgent;")}
+
+        # make request for image
+        response = requests.get(src, cookies=cookies, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        # prepare image
+        img = Image.open(io.BytesIO(response.content)).convert("RGB")
+        w, h = img.size   
+
+        # get dimensions acording to settings
+        left   = int(w * CROP_SIDE_FRAC)
+        right  = int(w * (1.0 - CROP_SIDE_FRAC))
+        top    = int(h * CROP_TOP_FRAC)
+        bottom = h
+
+        # crop image
+        cropped = img.crop((left, top, right, bottom))  
+
+        # prepare pixels array
+        pixels = np.array(cropped).reshape(-1, 3)    
+
+        # calc per channel median
+        med_r, med_g, med_b = int(np.median(pixels[:, 0])),  \
+            int(np.median(pixels[:, 1])),  \
+            int(np.median(pixels[:, 2]))
+        skin_hex = f"#{med_r:02x}{med_g:02x}{med_b:02x}"
+
+        # normalize to 0,1
+        pixels_f = pixels.astype(np.float64) / 255.0
+
+        # calc lightness of the median pixel by 
+        # RGB into luminance Y into CIE L* (0 dark, 100 light)
+        linear = np.where(pixels_f <= 0.04045, pixels_f / 12.92, ((pixels_f + 0.055) / 1.055) ** 2.4)
+        Y = np.median(linear @ [0.2126, 0.7152, 0.0722])
+        L = 116 * (Y ** (1/3)) - 16 if Y > 0.008856 else 903.3 * Y
+        return skin_hex, round(L, 2)
+    
+    except Exception as e:
+        print(f" [parser] Failed to parse player image: {e}")
+        return "", 0
     
 def parse_player_page(driver) -> dict:
     """Gets player data from given transfermarkt page."""
@@ -155,6 +226,13 @@ def parse_player_page(driver) -> dict:
 
     # get position 
     data["position_group"], data["position"] = _parse_position(driver)
+
+    # get player image/skin color
+    data["skin_hex"], skin_lightness  = _parse_image(driver)
+
+    # map lightness to human info
+    data["skin_color_group"], data["is_poc"] = _fitzpatrick_from_lightness(skin_lightness)
+    data["skin_lightness"] = str(skin_lightness)
 
     return data
 
