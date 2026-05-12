@@ -25,8 +25,8 @@ CROP_SIDE_FRAC = 0.20   # skip this fraction from each side
 
 def _dismiss_cookie_prompt(driver) -> None:
     # # cookies already cleared once
-    # if getattr(driver, "_cookies_accepted", False):
-    #     return
+    if getattr(driver, "_cookies_accepted", False):
+        return
     try:
         # switch into consent iframe
         iframe = WebDriverWait(driver, ELEMENT_LOAD_WAIT).until(
@@ -39,8 +39,8 @@ def _dismiss_cookie_prompt(driver) -> None:
             EC.element_to_be_clickable((By.CSS_SELECTOR, COOKIES_ACCEPT_BUTTON_CSS))
         ).click()
 
-        # # set flag in driver
-        # driver._cookies_accepted = True
+        # set flag in driver
+        driver._cookies_accepted = True
 
     except Exception as e:
         print(f" [parser] Failed to dismiss cookies prompt, safe to ignore: {e}")
@@ -252,7 +252,7 @@ def parse_search_results(driver) -> tuple[str, str]:
             # split based on slashes
             parts = href.rstrip("/").split("/")
             # get number from the end
-            tm_id     = parts[-1]
+            tm_id = parts[-1]
             # get string before profil "lionel-messi/profil/spieler/28003"
             # validate by checking for "-"
             tm_string = parts[-4] if "-" in parts[-4] else ""
