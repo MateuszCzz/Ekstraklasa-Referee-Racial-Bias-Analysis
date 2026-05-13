@@ -107,7 +107,12 @@ def build_fact_timeline(matches: list[dict]) -> pd.DataFrame:
         ((m, event) for m in matches for event in m["match_timeline"]),
         start=1,
     ):
-        team = m["home_team"] if event["is_home_team"] else m["away_team"]
+        # if event is own goal flip teams for given event
+        if event["event_type"] == "own_goal":
+            team = m["away_team"] if event["is_home_team"] else m["home_team"]
+        else:
+            team = m["home_team"] if event["is_home_team"] else m["away_team"]
+
         rows.append({
             "id": tid,
             "source_match_id": m["match_id"],
