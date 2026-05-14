@@ -16,7 +16,7 @@ def _build_search_url(url: str, player_name: str, player_team: str) -> str:
 def _build_player_url(tm_string: str, tm_id: str) -> str:
     return f"https://www.transfermarkt.com/{tm_string}/profil/spieler/{tm_id}"
 
-def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], partial_result_path: Path) -> list[dict]:
+def enrich_player_data(driver, url: str, test_mode: bool, no_prompt: bool, players: list[dict], partial_result_path: Path) -> list[dict]:
     # if its only a test run limit to 3 rows
     if test_mode:
         total = len(players)
@@ -61,6 +61,9 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
         # ask user for id if its missing
         if not player_tm_id:
             print(f"[query error] No transfermarkt id found for {player_search_query}")
+            if no_prompt:
+                print(f"  [SKIP] --no-prompt set, skipping {player_name}")
+                continue
             player_tm_id = input(f"  Enter transfermarkt ID for '{player_name}' ({player_team}), or skip: \n").strip()
             if not player_tm_id:
                 print(f"  [SKIP] Skipping {player_name}")
@@ -69,6 +72,9 @@ def enrich_player_data(driver, url: str, test_mode:bool, players: list[dict], pa
         # ask user for name string if its missing
         if not player_tm_string:
             print(f"[query error] No transfermarkt name string found for {player_search_query}")
+            if no_prompt:
+                print(f"  [SKIP] --no-prompt set, skipping {player_name}")
+                continue
             player_tm_string = input(f"  Enter transfermarkt name for '{player_name}' (e.g. 'lionel-messi'), or skip: \n").strip()
             if not player_tm_string:
                 print(f"  [SKIP] Skipping {player_name}")

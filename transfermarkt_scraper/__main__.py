@@ -46,6 +46,14 @@ def main() -> None:
         action="store_true", 
         help="Limit operations to first 3 rows for a test run (default: False)",
     )
+
+    # arg no-prompt
+    parser.add_argument(
+        "--no-prompt",
+        action="store_true",
+        default=False,
+        help="Skip players with missing transfermarkt links instead of prompting for manual input (default: False)",
+    )
     args = parser.parse_args()
 
     output_dir = args.data_out or DATA_DIR
@@ -56,7 +64,7 @@ def main() -> None:
 
     driver = create_driver(headless=args.headless)
     try:
-            enriched = enrich_player_data(driver, BASE_URL, args.test, players, PARTIAL_RESULT_DIR)
+            enriched = enrich_player_data(driver, BASE_URL, args.test, args.no_prompt, players, PARTIAL_RESULT_DIR)
 
     finally:
         driver.quit()
