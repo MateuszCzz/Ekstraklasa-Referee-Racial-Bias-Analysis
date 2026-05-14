@@ -1,7 +1,7 @@
 import time
 from pathlib import Path
 from parser import parse_search_results, parse_player_page
-from storage import load_csv, save_csv
+from storage import load_csv, save_csv, save_image
 
 PAGE_LOAD_WAIT  = 2.0   # after initial page load
 CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
@@ -112,7 +112,12 @@ def enrich_player_data(driver, url: str, test_mode: bool, no_prompt: bool, playe
             time.sleep(PAGE_LOAD_WAIT)
 
             # scrap transfermarkt for new data and update
-            row.update(parse_player_page(driver))
+            player_data, player_image = parse_player_page(driver)
+            row.update(player_data)
+
+            # save profile image
+            if player_image:
+                save_image(partial_result_path.parent / "images", player_image, row["tm_id"])
             
             # validate output on critical fields
             if row["full_name"] or row["age"] or row["nationality"] or row["position"]:

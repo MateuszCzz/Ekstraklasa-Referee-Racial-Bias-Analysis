@@ -151,7 +151,7 @@ def _parse_position(driver) -> tuple[str, str]:
         print(f" [parser] Failed to parse position: {e}")
         return "", ""
 
-def _parse_image(driver) -> tuple[str, float]:
+def _parse_image(driver) -> tuple[str, float, Image.Image|None]:
     """Extracts dominant skin hex and HSV lightness"""
     try:
         el = WebDriverWait(driver, ELEMENT_LOAD_WAIT).until(
@@ -203,15 +203,15 @@ def _parse_image(driver) -> tuple[str, float]:
         # handle placeholder, almost white image
         if L > 95:
             print(f" [parser] Image transfermarkt returned placeholder (L={L}), skipping")
-            return "", 0
+            return "", 0, None
         
-        return skin_hex, round(L, 2)
+        return skin_hex, round(L, 2), img
     
     except Exception as e:
         print(f" [parser] Failed to parse player image: {e}")
-        return "", 0
+        return "", 0, None
     
-def parse_player_page(driver) -> dict:
+def parse_player_page(driver) -> tuple[dict, Image.Image]:
     """Gets player data from given transfermarkt page."""
     data: dict = {}
 
@@ -240,7 +240,7 @@ def parse_player_page(driver) -> dict:
     data["position_group"], data["position"] = _parse_position(driver)
 
     # get player image/skin color
-    data["skin_hex"], skin_lightness  = _parse_image(driver)
+    data["skin_hex"], skin_lightness, img  = _parse_image(driver)
 
     if data["skin_hex"]:
         # map lightness to human info
@@ -249,7 +249,7 @@ def parse_player_page(driver) -> dict:
     else:
         # handle image placeholder
         data["skin_color_group"], data["is_poc"], data["skin_lightness"] = "", "", ""
-    return data
+    return data, img
 
 def parse_search_results(driver) -> tuple[str, str]:
     """Gets player transfermarkt id and name from first matching search results."""
