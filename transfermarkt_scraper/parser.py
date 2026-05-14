@@ -68,6 +68,12 @@ def _fitzpatrick_from_lightness(L: float) -> tuple[str, bool]:
     elif L >= 30: return "Medium dark", True
     else:         return "Dark",        True
 
+def _cie_lightness(pixels_f: np.ndarray) -> float:
+    """Returns CIE L* lightness (0 dark, 100 light)"""
+    linear = np.where(pixels_f <= 0.04045, pixels_f / 12.92, ((pixels_f + 0.055) / 1.055) ** 2.4)
+    Y = np.median(linear @ [0.2126, 0.7152, 0.0722])
+    return 116 * (Y ** (1 / 3)) - 16 if Y > 0.008856 else 903.3 * Y
+
 def _parse_name(driver) -> str:
     try:
         el = WebDriverWait(driver, ELEMENT_LOAD_WAIT).until(
@@ -192,9 +198,7 @@ def _parse_image(driver) -> tuple[str, float]:
 
         # calc lightness of the median pixel by 
         # RGB into luminance Y into CIE L* (0 dark, 100 light)
-        linear = np.where(pixels_f <= 0.04045, pixels_f / 12.92, ((pixels_f + 0.055) / 1.055) ** 2.4)
-        Y = np.median(linear @ [0.2126, 0.7152, 0.0722])
-        L = 116 * (Y ** (1/3)) - 16 if Y > 0.008856 else 903.3 * Y
+        L = _cie_lightness(pixels_f)
 
         # handle placeholder, almost white image
         if L > 95:
