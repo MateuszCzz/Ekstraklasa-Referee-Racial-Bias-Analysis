@@ -31,5 +31,11 @@ def save_partial_match(matchday_name: str, match_data: dict, short_home_name: st
     save_json(dest, match_data)
     return dest
 
+def load_partial_match(matchday_name: str, home_team: str) -> dict | None:
+    path = _partial_path(matchday_name, home_team)
+    if path.exists():
+        return load_json(path)
+    return None
+
 def is_match_done(matchday_name: str, home_team: str) -> bool:
     return _partial_path(matchday_name, home_team).exists()

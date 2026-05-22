@@ -4,7 +4,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from parser import parse_match
-from storage import save_partial_match, is_match_done
+from storage import save_partial_match, is_match_done, load_partial_match
 
 PAGE_LOAD_WAIT  = 2.0   # after initial page load
 CLICK_WAIT      = 2.5   # after clicking nav toggle or matchday
@@ -121,7 +121,10 @@ def _scrape_matchday(driver, matchday_name: str, base_url: str) -> dict:
     for match_id, home_team in matches:
         # Check done before going to match page
         if is_match_done(matchday_name, home_team):
-            print(f"    [{matchday_name}] {home_team}, already done, skipping")
+            cached = load_partial_match(matchday_name, home_team)
+            if cached:
+                results[match_id] = cached
+                print(f"    [{matchday_name}] {home_team}, already done, loaded from cache")
             continue
 
         try:
