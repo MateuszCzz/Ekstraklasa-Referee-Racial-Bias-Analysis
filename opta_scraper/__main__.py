@@ -6,8 +6,14 @@ from collector import scrape_all_matchdays
 
 DATA_DIR = Path("data/optascraper")
 RESULT_DIR = DATA_DIR / "result"
+BASE_URLS = [
+    {
+        "url": "https://optaplayerstats.statsperform.com/en_GB/soccer/ekstraklasa-2024-2025/18h2pva09qsgp7eu1en46pzis/results",
+        "season": "2024-25",
+    },
 BASE_URL = "https://optaplayerstats.statsperform.com/en_GB/soccer/ekstraklasa-2024-2025/18h2pva09qsgp7eu1en46pzis/results"
 
+]
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -16,16 +22,28 @@ def main() -> None:
 
     ensure_data_dir(DATA_DIR)
     driver = create_driver(headless=args.headless)
+    all_seasons = {}
+
     try:
-        matchdays = scrape_all_matchdays(driver, BASE_URL)
+        for config in BASE_URLS:
+            url, season = config["url"], config["season"]
+            print(f"\n\t Season {season}")
+            matchdays = scrape_all_matchdays(driver, url, season)
+
+            if not matchdays:
+                print(f"  No matchday data found for {season}")
+                continue
+
+            all_seasons[season] = matchdays
+            print(f"  Done - {sum(len(md) for md in matchdays.values())} matches scraped")
     finally:
         driver.quit()
 
-    if not matchdays:
+    if not all_seasons:
         print("No matchday data found - check selectors or page load")
         return
 
-    save_json(RESULT_DIR / "matchdays.json", matchdays)
+    save_json(RESULT_DIR / "matchdays.json", all_seasons)
     print(f"\nSaved to {RESULT_DIR / 'matchdays.json'}")
 
 if __name__ == "__main__":

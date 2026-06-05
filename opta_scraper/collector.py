@@ -82,7 +82,7 @@ def _read_matches(driver) -> list[tuple[str, str]]:
     return matches
 
 
-def _check_matches(driver, matchday_name: str, base_url: str) -> list:
+def _check_matches(driver, matchday_name: str, base_url: str, season: str) -> list:
     matches = _read_matches(driver)
     if len(matches) >= MIN_MATCHES_PER_ROUND:
         return matches
@@ -107,9 +107,9 @@ def _check_matches(driver, matchday_name: str, base_url: str) -> list:
     return matches
 
 
-def _scrape_matchday(driver, matchday_name: str, base_url: str) -> dict:
+def _scrape_matchday(driver, matchday_name: str, base_url: str, season: str) -> dict:
     """For each match in the current matchday: click, parse, go back."""
-    matches = _check_matches(driver, matchday_name, base_url)
+    matches = _check_matches(driver, matchday_name, base_url, season)
 
     if not matches:
         print(f"  [{matchday_name}] No match rows found skipping")
@@ -120,8 +120,8 @@ def _scrape_matchday(driver, matchday_name: str, base_url: str) -> dict:
 
     for match_id, home_team in matches:
         # Check done before going to match page
-        if is_match_done(matchday_name, home_team):
-            cached = load_partial_match(matchday_name, home_team)
+        if is_match_done(matchday_name, home_team, season):
+            cached = load_partial_match(matchday_name, home_team, season)
             if cached:
                 results[match_id] = cached
                 print(f"    [{matchday_name}] {home_team}, already done, loaded from cache")
@@ -136,9 +136,9 @@ def _scrape_matchday(driver, matchday_name: str, base_url: str) -> dict:
             time.sleep(MATCH_PAGE_WAIT)
 
             parsed = parse_match(driver)
-            match_data = {"match_id": match_id, "matchday": matchday_name, **parsed}
+            match_data = {"match_id": match_id, "matchday": matchday_name, "season": season, **parsed}
 
-            saved_path = save_partial_match(matchday_name, match_data, home_team)
+            saved_path = save_partial_match(matchday_name, match_data, home_team, season)
             results[match_id] = match_data
             print(f"    [{matchday_name}] {parsed.get('home_team')} vs {parsed.get('away_team')} {saved_path}")
 
@@ -156,7 +156,7 @@ def _scrape_matchday(driver, matchday_name: str, base_url: str) -> dict:
 
     return results
 
-def scrape_all_matchdays(driver, url: str) -> dict:
+def scrape_all_matchdays(driver, url: str, season: str) -> dict:
     print(f"Loading: {url}")
     driver.get(url)
     time.sleep(PAGE_LOAD_WAIT)
@@ -175,7 +175,7 @@ def scrape_all_matchdays(driver, url: str) -> dict:
     for name in matchday_names:
         print(f"\n[{name}] Selecting...")
         _navbar_control(driver, click_name=name)
-        all_results[name] = _scrape_matchday(driver, name, url)
+        all_results[name] = _scrape_matchday(driver, name, url, season)
         print(f"  [{name}] Done - {len(all_results[name])} matches saved")
 
 
