@@ -8,8 +8,9 @@ STAT_COLS: list[str] = [
 
 def _iter_matches(matchdays: dict):
     """Yield every match dict"""
-    for matchday_matches in matchdays.values():
-        yield from matchday_matches.values()
+    for season_data in matchdays.values():
+        for matchday_matches in season_data.values():
+            yield from matchday_matches.values()
 
 def _get_nr_from_matchday(label: str) -> int | None:
     parts = label.split()
@@ -70,6 +71,7 @@ def build_dim_match(matches: list[dict], venue_df: pd.DataFrame) -> pd.DataFrame
         {
             "match_id": i,
             "source_match_id": m["match_id"],
+            "season": m["season"],
             "date": pd.to_datetime(m["date"], format="%d %B %Y %H:%M"),
             "home_team": m["home_team"],
             "away_team": m["away_team"],
