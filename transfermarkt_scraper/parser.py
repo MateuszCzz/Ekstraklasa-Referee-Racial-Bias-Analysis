@@ -20,7 +20,8 @@ PLAYER_IMAGE_CSS = "img.data-header__profile-image"
 ELEMENT_LOAD_WAIT = 10 # delay for elements to become visible
 SCROLL_PAUSE   = 2.0 # delay after scrolling
 
-CROP_TOP_FRAC = 0.40   # skip this fraction from the top
+CROP_TOP_FRAC = 0.40    # skip this fraction from the top
+CROP_BOTTOM_FRAC = 0.65 # skip this fraction from the bottom
 CROP_SIDE_FRAC = 0.20   # skip this fraction from each side
 
 def _dismiss_cookie_prompt(driver) -> None:
@@ -179,7 +180,7 @@ def _parse_image(driver) -> tuple[str, float, Image.Image|None]:
         left   = int(w * CROP_SIDE_FRAC)
         right  = int(w * (1.0 - CROP_SIDE_FRAC))
         top    = int(h * CROP_TOP_FRAC)
-        bottom = h
+        bottom = int(h * CROP_BOTTOM_FRAC)
 
         # crop image
         cropped = img.crop((left, top, right, bottom))  
