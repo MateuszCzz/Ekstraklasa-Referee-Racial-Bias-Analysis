@@ -190,8 +190,8 @@ class TestTimelineStructure:
     def test_event_types_valid(self, all_events):
         """Every timeline event must have a event_type"""
         bad = [
-            f"{md}/{mid}: {ev.get('event_type')!r}"
-            for md, mid, ev in all_events
+            f"{season}/{md}/{mid}: {ev.get('event_type')!r}"
+            for season, md, mid, ev in all_events
             if ev.get("event_type") not in VALID_EVENT_TYPES
         ]
         assert not bad, "Unknown event types:\n" + "\n".join(bad)
@@ -199,8 +199,8 @@ class TestTimelineStructure:
     def test_required_event_keys_present(self, all_events):
         """Every event must contain required keys"""
         bad = [
-            f"{md}/{mid}: {ev.get('event_type')} missing {REQUIRED_TIMELINE_KEYS - ev.keys()}"
-            for md, mid, ev in all_events
+            f"{season}/{md}/{mid}: {ev.get('event_type')} missing {REQUIRED_TIMELINE_KEYS - ev.keys()}"
+            for season, md, mid, ev in all_events
             if REQUIRED_TIMELINE_KEYS - ev.keys()
         ]
         assert not bad, "Events with missing keys:\n" + "\n".join(bad)
@@ -208,8 +208,8 @@ class TestTimelineStructure:
     def test_event_minute_is_positive_integer(self, all_events):
         """Event minutes must be positive number"""
         bad = [
-            f"{md}/{mid}: minute={ev.get('minute')!r}"
-            for md, mid, ev in all_events
+            f"{season}/{md}/{mid}: minute={ev.get('minute')!r}"
+            for season, md, mid, ev in all_events
             if not isinstance(ev.get("minute"), int) or ev["minute"] <= 0
         ]
         assert not bad, "Events with invalid minute:\n" + "\n".join(bad)
@@ -217,8 +217,8 @@ class TestTimelineStructure:
     def test_event_player_present(self, all_events):
         """Every event must have a player name"""
         bad = [
-            f"{md}/{mid}: {ev.get('event_type')} at {ev.get('minute')} has no player"
-            for md, mid, ev in all_events
+            f"{season}/{md}/{mid}: {ev.get('event_type')} at {ev.get('minute')} has no player"
+            for season, md, mid, ev in all_events
             if not ev.get("player")
         ]
         assert not bad, "Events missing player:\n" + "\n".join(bad)
@@ -226,8 +226,8 @@ class TestTimelineStructure:
     def test_substitution_has_second_player(self, all_events):
         """substitution events must have a second player name"""
         bad = [
-            f"{md}/{mid}: substitution at {ev.get('minute')} — second_player={ev.get('second_player')!r}"
-            for md, mid, ev in all_events
+            f"{season}/{md}/{mid}: substitution at {ev.get('minute')} — second_player={ev.get('second_player')!r}"
+            for season, md, mid, ev in all_events
             if ev.get("event_type") == "substitution" and not ev.get("second_player")
         ]
         assert not bad, "Substitutions missing second player:\n" + "\n".join(bad)
@@ -235,7 +235,7 @@ class TestTimelineStructure:
     def test_goal_count_matches_score(self, all_matches):
         """Sum of goal-type timeline events per team must equal the match score"""
         bad = []
-        for md_name, match_id, m in all_matches:
+        for season, md_name, match_id, m in all_matches:
             home_tl = sum(
                 1 for ev in m.get("match_timeline", [])
                 if ev["event_type"] in GOAL_EVENTS and ev["is_home_team"]
@@ -246,7 +246,7 @@ class TestTimelineStructure:
             )
             if home_tl != m["home_goals"] or away_tl != m["away_goals"]:
                 bad.append(
-                    f"{md_name}/{match_id}: "
+                    f"{season}/{md_name}/{match_id}: "
                     f"timeline home={home_tl} score={m['home_goals']} | "
                     f"timeline away={away_tl} score={m['away_goals']} "
                     f"({m['home_team']} vs {m['away_team']})"
