@@ -1,7 +1,5 @@
 import pandas as pd
 
-DATA_START_DATE = "2024-01-01"
-DATA_END_DATE   = "2025-12-12"
 STAT_COLS: list[str] = [
     "goals", "assists", "red_cards", "yellow_cards", "corners_won",
     "shots", "shots_on_target", "blocked_shots", "passes", "crosses",
@@ -24,8 +22,18 @@ def _parse_attendance(value: str) -> int|str:
         print(f"Could not parse attendance: {value!r}, defaulting to empty string")
         return " "
 
-def build_dim_date() -> pd.DataFrame:
-    return pd.DataFrame({"date": pd.date_range(DATA_START_DATE, DATA_END_DATE, freq="D")})
+def build_dim_date(matches: list[dict]) -> pd.DataFrame:
+    dates = []
+
+    for m in matches:
+            try:
+                dates.append(pd.to_datetime(m["date"], format="%d %B %Y %H:%M"))
+            except Exception:
+                pass
+    if not dates:
+        raise ValueError("No valid dates found in match data")
+
+    return pd.DataFrame({"date": pd.date_range(str(min(dates).date()), str(max(dates).date()), freq="D")})
 
 def build_dim_referee(matches: list[dict]) -> pd.DataFrame:
     refs = sorted({m["referee"] for m in matches})
@@ -140,7 +148,7 @@ def build_tables(matchdays: dict) -> dict[str, pd.DataFrame]:
     venue_df = build_dim_venue(matches)
 
     tables = {
-        "dimDate":              build_dim_date(),
+        "dimDate":              build_dim_date(matches),
         "dimReferee":           build_dim_referee(matches),
         "dimVenue":             venue_df,
         "dimTeam":              build_dim_team(matches),
