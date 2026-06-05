@@ -11,8 +11,10 @@ BASE_URLS = [
         "url": "https://optaplayerstats.statsperform.com/en_GB/soccer/ekstraklasa-2024-2025/18h2pva09qsgp7eu1en46pzis/results",
         "season": "2024-25",
     },
-BASE_URL = "https://optaplayerstats.statsperform.com/en_GB/soccer/ekstraklasa-2024-2025/18h2pva09qsgp7eu1en46pzis/results"
-
+    {
+        "url": "https://optaplayerstats.statsperform.com/en_GB/soccer/ekstraklasa-2025-2026/3ghh5adz62ws55se0snozmej8/results",
+        "season": "2025-26",
+    },
 ]
 
 def main() -> None:
