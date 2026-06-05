@@ -41,48 +41,64 @@ def matchdays_json():
 @pytest.fixture(scope="session")
 def all_matches(matchdays_json):
     return [
-        (md_name, match_id, match)
-        for md_name, matches in matchdays_json.items()
+        (season, md_name, match_id, match)
+        for season, matchdays in matchdays_json.items()
+        for md_name, matches in matchdays.items()
         for match_id, match in matches.items()
     ]
 
 @pytest.fixture(scope="session")
 def all_events(all_matches):
     return [
-        (md_name, match_id, ev)
-        for md_name, match_id, match in all_matches
+        (season, md_name, match_id, ev)
+        for season, md_name, match_id, match in all_matches
         for ev in match.get("match_timeline", [])
     ]
 
 class TestDataTotals:
     def test_matchday_count(self, matchdays_json):
         """Season contains exactly 34 matchdays"""
-        assert len(matchdays_json) == EXPECTED_MATCHDAYS
+        bad = [
+            f"{season}: got {len(matchdays)} matchdays"
+            for season, matchdays in matchdays_json.items()
+            if len(matchdays) != EXPECTED_MATCHDAYS
+        ]
+        assert not bad, "\n".join(bad)
 
     def test_total_matches(self, matchdays_json):
         """Total match count equals 306"""
-        total = sum(len(md) for md in matchdays_json.values())
-        assert total == TOTAL_MATCHES
+        bad = [
+            f"{season}: got {sum(len(md) for md in matchdays.values())} matches"
+            for season, matchdays in matchdays_json.items()
+            if sum(len(md) for md in matchdays.values()) != TOTAL_MATCHES
+        ]
+        assert not bad, "\n".join(bad)
 
     def test_matches_per_full_matchday(self, matchdays_json):
         """Every matchday has exactly 9 matches"""
         bad = {
-            name: len(md)
-            for name, md in matchdays_json.items()
+            f"{season}/{name}": len(md)
+            for season, matchdays in matchdays_json.items()
+            for name, md in matchdays.items()
             if len(md) != FULL_MATCHDAY_SIZE
         }
         assert not bad, f"Unexpected match counts: {bad}"
 
     def test_unique_team_count(self, matchdays_json):
         """Exactly 18 unique teams appear across the season"""
-        teams = {
-            team
-            for md in matchdays_json.values()
-            for match in md.values()
-            for team in (match.get("home_team"), match.get("away_team"))
-            if team
-        }
-        assert len(teams) == EXPECTED_TEAMS
+        bad = []
+        for season, matchdays in matchdays_json.items():
+            teams = {
+                team
+                for md in matchdays.values()
+                for match in md.values()
+                for team in (match.get("home_team"), match.get("away_team"))
+                if team
+            }
+            if len(teams) != EXPECTED_TEAMS:
+                bad.append(f"{season}: got {len(teams)} teams")
+        assert not bad, "\n".join(bad)
+
 
 class TestMatchStructure:
     def test_required_keys_present(self, all_matches):
